@@ -1,0 +1,53 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Cursor Guidelines for Your Astro VPS Bench Website
+This guide provides an approach to using Cursor for "vibe coding" your Astro VPS benchmark website, leveraging our conversation and the vps-bench-features document. The goal is to streamline your development process with AI assistance while maintaining control over the project structure and logic.
+
+General Cursor Rules/Guidelines:
+Start with Structure: Before diving into component logic, use Cursor to help you set up the basic Astro project structure, including content collections, layouts, and initial pages (e.g., src/pages/index.astro, src/pages/vps/[slug].astro).
+
+Refer to Context: When prompting, explicitly mention the relevant parts of the vps-bench-features document or the Markdown example. For instance, "Based on the price_monthly, currency, and provider fields in the VPS Markdown frontmatter..."
+
+Iterative Development: Don't try to build a whole page in one go. Break down tasks into smaller, manageable chunks (e.g., "create the filter component," "parse disk I/O from raw YABS output," "display network speeds in a table").
+
+Component-Driven Thinking: Astro works well with components. Think about what reusable components you'll need (e.g., VPSCard.astro, BenchmarkTable.astro, FilterForm.astro) and prompt Cursor to generate these.
+
+Data Parsing Focus: Since you're manually managing Markdown, a crucial task will be parsing the raw_yabs_output and raw_benchsh_output fields in your Markdown frontmatter. Prompt Cursor to help you write efficient parsing logic (e.g., using JavaScript/TypeScript in Astro components or serverless functions if needed).
+
+Tailwind CSS Integration: Remember to prompt Cursor to use Tailwind CSS classes for styling. If you need a specific look, describe it clearly (e.g., "make this button rounded with a subtle shadow and a primary blue background").
+
+Review and Refine: Always review the generated code. Cursor is a powerful assistant, but it might not always align perfectly with your exact vision or the most optimized solution. Refactor and refine as needed.
+
+Error Handling (Basic): Prompt Cursor to include basic error handling, especially when parsing data, to make your site more robust.
+
+Example Cursor Prompts:
+Here are some prompts you can use as a starting point, tailored to the features discussed:
+
+1. Setting up Astro Content Collection:
+Prompt: "Show me how to set up an Astro content collection named vps that reads Markdown files, with a schema that includes title, provider, location, price_monthly (number), currency (string, enum 'IDR'|'USD'|'AUD'), cpu_cores (number), ram_gb (number), storage_gb (number), storage_type (string), bandwidth_tb (number), virtualization (string), status (string), last_updated (string or Date), tags (array of strings), affiliate_link (string), raw_yabs_output (string), and raw_benchsh_output (string). Provide the src/content/config.ts file content."
+
+2. Listing VPS Cards on Homepage (index.astro):
+Prompt: "Create an Astro page component for the homepage (src/pages/index.astro). It should query all VPS entries from the vps content collection. Display each VPS as a card using Tailwind CSS, showing its title, provider, location, price_monthly with its currency, cpu_cores, ram_gb, and a link to its detailed page (/vps/[slug]). Make the cards responsive for mobile and desktop."
+
+3. Creating a Detailed VPS Page (src/pages/vps/[slug].astro):
+Prompt: "Generate an Astro page component src/pages/vps/[slug].astro for displaying a single VPS. It should fetch the specific VPS entry based on the slug.
+
+Display all frontmatter fields clearly.
+
+Crucially, add a section to parse and display the fio Disk Speed Tests from the raw_yabs_output. Extract the 'Block Size', 'Read MB/s (IOPS)', and 'Write MB/s (IOPS)' into a responsive HTML table using Tailwind. Handle cases where the data might be missing.
+
+Add another section to parse and display the iperf3 Network Speed Tests (IPv4) from raw_yabs_output in a similar Tailwind-styled table, showing 'Provider', 'Location', 'Send Speed', 'Recv Speed', and 'Ping'."
+
+4. Parsing Bench.sh I/O:
+Prompt: "Write a JavaScript function (or an Astro component script) that takes the raw_benchsh_output string as input and extracts the 'I/O Speed(average)' value (e.g., '5700.3 MB/s'). Provide a robust regex or string parsing approach."
+
+5. Affiliate Button Component:
+Prompt: "Create a reusable Astro component src/components/AffiliateButton.astro. It should accept link and providerName props. Style it as a prominent, rounded button with a strong call to action like 'Visit [Provider Name]'. Use Tailwind CSS with a primary color background, hover effects, and a slight shadow."
+
+6. Search and Filter Component:
+Prompt: "Design an Astro component src/components/SearchFilter.astro that allows users to filter VPS entries. Include input fields for 'Provider', 'Location', and a range slider for 'RAM (GB)'. Use Tailwind for styling and suggest a basic client-side filtering logic for display."
+
+By using these types of targeted prompts and following the general guidelines, you can effectively "vibe code" your website with Cursor, letting the AI handle repetitive or complex parsing tasks while you focus on the overall architecture and user experience. Good luck!

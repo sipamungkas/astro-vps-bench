@@ -1,0 +1,88 @@
+---
+import { getCollection, type CollectionEntry } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+import { parseFioOutput, parseIperfOutput } from "../../utils/parsers";
+import FioTable from "../../components/FioTable.astro";
+import IperfTable from "../../components/IperfTable.astro";
+import AffiliateButton from "../../components/AffiliateButton.astro";
+
+export async function getStaticPaths() {
+  const vpsEntries = await getCollection("vps");
+  return vpsEntries.map((entry) => ({
+    params: { slug: entry.slug },
+    props: { entry },
+  }));
+}
+
+interface Props {
+  entry: CollectionEntry<"vps">;
+}
+
+const { entry } = Astro.props;
+const { data } = entry;
+
+const fioResults = parseFioOutput(data.raw_yabs_output);
+const iperf4Results = parseIperfOutput(data.raw_yabs_output, "IPv4");
+const iperf6Results = parseIperfOutput(data.raw_yabs_output, "IPv6");
+---
+
+<Layout title={data.title}>
+  <div class="max-w-3xl mx-auto">
+    <a href="/" class="inline-flex items-center gap-2 text-cyan-400 hover:text-blue-400 text-sm mb-6">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+      Back to list
+    </a>
+    <div class="rounded-3xl bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl p-8 mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-2">{data.title}</h1>
+          <div class="text-gray-400 text-base mb-1">{data.provider} &mdash; {data.location}</div>
+          <div class="flex items-center gap-4 mb-2">
+            <span class="text-2xl font-extrabold text-green-400">{new Intl.NumberFormat("en-US", { style: "currency", currency: data.currency }).format(data.price_monthly)}</span>
+            <span class="text-xs text-gray-400">/month</span>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs text-gray-400 mb-2">
+            <span>{data.cpu_cores} CPU</span>
+            <span>{data.ram_gb} GB RAM</span>
+            <span>{data.storage_gb} GB {data.storage_type}</span>
+            <span>{data.bandwidth_tb} TB BW</span>
+            <span>{data.virtualization}</span>
+          </div>
+          <div class="flex flex-wrap gap-1 mt-2">
+            {data.tags.map(tag => (
+              <span class="bg-cyan-800/30 text-cyan-200 px-2 py-0.5 rounded-full text-[11px] font-mono tracking-wide">{tag}</span>
+            ))}
+          </div>
+        </div>
+        <AffiliateButton link={data.affiliate_link} providerName={data.provider} />
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div class="bg-gray-700/40 rounded-xl p-4">
+          <div class="font-semibold text-gray-300 mb-1">Status</div>
+          <div class="text-cyan-400 font-bold text-lg">{data.status}</div>
+        </div>
+        <div class="bg-gray-700/40 rounded-xl p-4">
+          <div class="font-semibold text-gray-300 mb-1">Last Updated</div>
+          <div class="text-gray-200">{data.last_updated.toDateString()}</div>
+        </div>
+      </div>
+      <div class="space-y-8">
+        {fioResults.length > 0 ? <FioTable results={fioResults} /> : null}
+        {iperf4Results.length > 0 ? <IperfTable results={iperf4Results} ipVersion="IPv4" /> : null}
+        {iperf6Results.length > 0 ? <IperfTable results={iperf6Results} ipVersion="IPv6" /> : null}
+      </div>
+      <div class="mt-8">
+        <details class="bg-gray-900/80 rounded-lg">
+          <summary class="cursor-pointer text-lg font-semibold p-4 text-cyan-400 hover:bg-gray-700 rounded-t-lg">Raw YABS Output</summary>
+          <pre class="bg-gray-950 p-4 rounded-b-lg overflow-x-auto text-xs text-gray-300"><code>{data.raw_yabs_output}</code></pre>
+        </details>
+      </div>
+      <div class="mt-4">
+        <details class="bg-gray-900/80 rounded-lg">
+          <summary class="cursor-pointer text-lg font-semibold p-4 text-cyan-400 hover:bg-gray-700 rounded-t-lg">Raw bench.sh Output</summary>
+          <pre class="bg-gray-950 p-4 rounded-b-lg overflow-x-auto text-xs text-gray-300"><code>{data.raw_benchsh_output}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+</Layout>

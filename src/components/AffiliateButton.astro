@@ -1,0 +1,16 @@
+---
+interface Props {
+  link: string;
+  providerName: string;
+}
+
+const { link, providerName } = Astro.props;
+---
+<a
+  href={link}
+  target="_blank"
+  rel="noopener noreferrer"
+  class="inline-block rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-bold px-6 py-3 shadow-lg hover:scale-105 hover:brightness-110 transition-all duration-200 text-base tracking-wide"
+>
+  Visit {providerName}
+</a> 
