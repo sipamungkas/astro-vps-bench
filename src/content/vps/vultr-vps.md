@@ -1,19 +1,19 @@
 ---
-title: 'Regular Cloud'
-provider: 'Vultr'
-location: 'Tokyo, Japan'
+title: "Regular Cloud"
+provider: "Vultr"
+location: "Tokyo, Japan"
 price_monthly: 5.00
-currency: 'USD'
+currency: "USD"
 cpu_cores: 1
 ram_gb: 1
 storage_gb: 25
-storage_type: 'NVMe SSD'
+storage_type: "NVMe SSD"
 bandwidth_tb: 2
-virtualization: 'KVM'
-status: 'active'
+virtualization: "KVM"
+status: "active"
 last_updated: 2023-10-27
-tags: ['cloud', 'asia', 'nvme']
-affiliate_link: 'https://vultr.com/'
+tags: ["cloud", "asia", "nvme"]
+affiliate_link: "https://vultr.com/"
 raw_yabs_output: |
   # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## #
   #              Yet-Another-Bench-Script              #
@@ -52,4 +52,5 @@ raw_benchsh_output: |
   I/O speed(3rd run): 6900.0 MB/s
   I/O speed(average): 6800.1 MB/s
 ---
-This is a dummy Vultr VPS for comparison. 
+
+This is a dummy Vultr VPS for comparison.
