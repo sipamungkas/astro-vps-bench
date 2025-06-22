@@ -1,19 +1,102 @@
 ---
 import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
-import VPSCard from '../components/VPSCard.astro';
 
 const allVps = await getCollection('vps');
 ---
 
-<Layout title="VPS Benchmarks">
-	<section class="mb-12 text-center">
-		<h1 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 text-transparent bg-clip-text mb-4 drop-shadow-lg">VPS Benchmark Leaderboard</h1>
-		<p class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-2">Discover and compare the best VPS providers, benchmarked for real-world performance. Minimalist, fast, and beautiful.</p>
+<Layout title="VPS Benchmark Dashboard">
+	<section class="mb-8">
+		<h1 class="text-4xl md:text-5xl font-extrabold mb-2">VPS Benchmark Dashboard</h1>
+		<p class="text-lg text-gray-500 mb-6">Compare VPS performance across providers</p>
+		<div class="mb-6">
+			<!-- Placeholder for SearchFilter -->
+			<div class="flex items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-2 max-w-xl">
+				<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+				<input type="text" placeholder="Search providers, locations..." class="flex-1 bg-transparent outline-none text-base text-gray-700" />
+				<select class="bg-gray-100 border border-gray-200 rounded px-2 py-1 text-sm text-gray-700">
+					<option>All Providers</option>
+				</select>
+				<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg></button>
+				<button class="w-8 h-8 flex items-center justify-center rounded border-2 border-blue-500 bg-blue-50"><svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+			</div>
+		</div>
+		<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+			<!-- Placeholder StatCards -->
+			<div class="bg-white rounded-xl shadow p-5 flex flex-col items-center">
+				<span class="text-blue-500 text-2xl font-bold mb-1">{allVps.length}</span>
+				<span class="text-xs text-gray-500">VPS Benchmarks</span>
+			</div>
+			<div class="bg-white rounded-xl shadow p-5 flex flex-col items-center">
+				<span id="selected-count" class="text-green-500 text-2xl font-bold mb-1">0</span>
+				<span class="text-xs text-gray-500">Selected</span>
+			</div>
+			<div class="bg-white rounded-xl shadow p-5 flex flex-col items-center">
+				<span class="text-blue-500 text-2xl font-bold mb-1">{[...new Set(allVps.map(v=>v.data.provider))].length}</span>
+				<span class="text-xs text-gray-500">Providers</span>
+			</div>
+			<div class="bg-white rounded-xl shadow p-5 flex flex-col items-center">
+				<span class="text-blue-500 text-2xl font-bold mb-1">{[...new Set(allVps.map(v=>v.data.location))].length}</span>
+				<span class="text-xs text-gray-500">Countries</span>
+			</div>
+		</div>
+		<div class="flex justify-end mb-2">
+			<button id="compare-btn" class="px-6 py-2 rounded-full bg-blue-500 text-white font-semibold shadow hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>Compare</button>
+		</div>
+		<div class="bg-white rounded-2xl shadow-lg overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-gray-50 text-gray-500 font-semibold">
+					<tr>
+						<th class="px-4 py-3 text-left">Select</th>
+						<th class="px-4 py-3 text-left">Provider</th>
+						<th class="px-4 py-3 text-left">Plan</th>
+						<th class="px-4 py-3 text-left">Price</th>
+						<th class="px-4 py-3 text-left">Location</th>
+						<th class="px-4 py-3 text-left">CPU</th>
+						<th class="px-4 py-3 text-left">Memory</th>
+						<th class="px-4 py-3 text-left">Storage</th>
+						<th class="px-4 py-3 text-left">Network Speed</th>
+						<th class="px-4 py-3 text-left">Performance</th>
+						<th class="px-4 py-3 text-left">Actions</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-100">
+					{allVps.map((vps, i) => (
+						<tr>
+							<td class="px-4 py-3"><input type="checkbox" class="accent-blue-500 vps-checkbox" data-slug={vps.slug} /></td>
+							<td class="px-4 py-3"><span class="inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">{vps.data.provider}</span></td>
+							<td class="px-4 py-3">{vps.data.title}</td>
+							<td class="px-4 py-3 text-green-600 font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: vps.data.currency }).format(vps.data.price_monthly)}/mo</td>
+							<td class="px-4 py-3">{vps.data.location}</td>
+							<td class="px-4 py-3">{vps.data.cpu_cores} cores</td>
+							<td class="px-4 py-3">{vps.data.ram_gb} GB</td>
+							<td class="px-4 py-3">{vps.data.storage_gb} GB<br /><span class="text-xs text-gray-400">{vps.data.storage_type}</span></td>
+							<td class="px-4 py-3">—</td>
+							<td class="px-4 py-3"><span class="inline-block px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">—</span></td>
+							<td class="px-4 py-3 flex gap-2">
+								<a href={`/vps/${vps.slug}`} class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100" title="View"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></a>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+		<script is:inline>
+			const checkboxes = Array.from(document.querySelectorAll('.vps-checkbox'));
+			const compareBtn = document.getElementById('compare-btn');
+			const selectedCount = document.getElementById('selected-count');
+			function updateCompareState() {
+				const selected = checkboxes.filter(cb => cb.checked);
+				selectedCount.textContent = selected.length;
+				compareBtn.disabled = selected.length < 2;
+				compareBtn.onclick = () => {
+					if (selected.length >= 2) {
+						const slugs = selected.map(cb => cb.dataset.slug).join(',');
+						window.location.href = `/compare?ids=${slugs}`;
+					}
+				};
+			}
+			checkboxes.forEach(cb => cb.addEventListener('change', updateCompareState));
+		</script>
 	</section>
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-		{allVps.map(vps => (
-			<VPSCard vps={vps} />
-		))}
-	</div>
 </Layout>

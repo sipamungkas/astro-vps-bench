@@ -1,0 +1,65 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "../layouts/Layout.astro";
+
+const allVps = await getCollection("vps");
+---
+<Layout title="Compare VPS">
+  <div class="max-w-6xl mx-auto">
+    <a
+      href="/"
+      class="inline-flex items-center gap-2 text-blue-500 hover:text-blue-700 text-sm mb-6"
+    >
+      <svg
+        width="18"
+        height="18"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"></path></svg
+      >
+      Back to Dashboard
+    </a>
+    <h1 class="text-3xl md:text-4xl font-extrabold mb-8">Compare VPS</h1>
+    <script type="application/json" id="all-vps-json" set:html={JSON.stringify(allVps)}></script>
+    <div id="compare-table"></div>
+    <script is:inline>
+      const allVps = JSON.parse(document.getElementById('all-vps-json').textContent);
+      const params = new URLSearchParams(window.location.search);
+      const ids = params.get('ids')?.split(',').filter(Boolean) ?? [];
+      const selectedVps = allVps.filter(vps => ids.includes(vps.slug));
+      const container = document.getElementById('compare-table');
+      console.log({ allVps, ids, selectedVps });
+      if (selectedVps.length < 2) {
+        container.innerHTML = `<div class="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg p-6 text-center font-semibold">Please select at least two VPS to compare.<br>DEBUG: ids=[${ids.join(', ')}], allVps.length=${allVps.length}, selectedVps.length=${selectedVps.length}</div>`;
+      } else {
+        const fields = [
+          { label: 'Provider', key: 'provider', render: v => `<span class='inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold'>${v}</span>` },
+          { label: 'Plan', key: 'title' },
+          { label: 'Price', key: 'price_monthly', render: (v, vps) => `<span class='text-green-600 font-bold'>${new Intl.NumberFormat('en-US', { style: 'currency', currency: vps.data.currency }).format(v)}/mo</span>` },
+          { label: 'Location', key: 'location' },
+          { label: 'CPU', key: 'cpu_cores', render: v => `${v} cores` },
+          { label: 'Memory', key: 'ram_gb', render: v => `${v} GB` },
+          { label: 'Storage', key: 'storage_gb', render: (v, vps) => `${v} GB<br><span class='text-xs text-gray-400'>${vps.data.storage_type}</span>` },
+          { label: 'Bandwidth', key: 'bandwidth_tb', render: v => `${v} TB` },
+          { label: 'Virtualization', key: 'virtualization' },
+          { label: 'Performance', key: '', render: () => `<span class='inline-block px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold'>—</span>` },
+          { label: 'Actions', key: '', render: (_, vps) => `<a href='/vps/${vps.slug}' class='inline-block px-3 py-1 rounded-full bg-blue-500 text-white font-semibold hover:bg-blue-600 transition'>View</a>` },
+        ];
+        let html = `<div class='bg-white rounded-2xl shadow-lg overflow-x-auto'><table class='min-w-full text-sm'><thead class='bg-gray-50 text-gray-500 font-semibold'><tr><th class='px-4 py-3 text-left'>Field</th>`;
+        for (const vps of selectedVps) html += `<th class='px-4 py-3 text-center'>${vps.data.title}</th>`;
+        html += `</tr></thead><tbody class='divide-y divide-gray-100'>`;
+        for (const field of fields) {
+          html += `<tr><td class='px-4 py-3 font-semibold'>${field.label}</td>`;
+          for (const vps of selectedVps) {
+            let value = field.key ? vps.data[field.key] : null;
+            html += `<td class='px-4 py-3 text-center'>${field.render ? field.render(value, vps) : value ?? ''}</td>`;
+          }
+          html += `</tr>`;
+        }
+        html += `</tbody></table></div>`;
+        container.innerHTML = html;
+      }
+    </script>
+  </div>
+</Layout>
