@@ -142,12 +142,6 @@ const allVps = await getCollection("vps");
                 <td class="px-4 py-3">{vps.data.ram_gb} GB</td>
                 <td class="px-4 py-3">
                   {vps.data.storage_gb} GB
-                  <>
-                    <br />
-                    <span class="text-xs text-gray-400">
-                      {vps.data.storage_type}
-                    </span>
-                  </>
                 </td>
                 <td class="px-4 py-3">—</td>
                 <td class="px-4 py-3">
@@ -156,30 +150,13 @@ const allVps = await getCollection("vps");
                   </span>
                 </td>
                 <td class="px-4 py-3 flex gap-2">
-                  <a
-                    href={`/vps/${vps.slug}`}
-                    class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100"
-                    title="View"
-                  >
-                    <svg
-                      class="w-5 h-5 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <>
-                        <circle cx="12" cy="12" r="10" />
-                        <circle cx="12" cy="12" r="3" />
-                      </>
-                    </svg>
+                  <a href={`/vps/${vps.slug}`} class="w-8 h-8 flex items-center justify-center rounded hover:bg-blue-100" title="View Details">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
                   </a>
-                  <div class="mt-1">
-                    <AffiliateButton
-                      link={vps.data.affiliate_link}
-                      providerName={vps.data.provider}
-                    />
-                  </div>
+                  <a href={vps.data.affiliate_link} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold text-sm shadow hover:scale-105 hover:brightness-110 transition-all duration-200" title="Buy VPS (Affiliate)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 7h20M2 12h20M2 17h20"/><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M7 15h.01"/></svg>
+                    Buy
+                  </a>
                 </td>
               </tr>
             ))
