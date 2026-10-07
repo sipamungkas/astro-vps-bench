@@ -637,3 +637,72 @@ hex_ambil_json_yabs() {
     local in="$1"
     grep -o '{"version".*}' "$in" | tail -1
 }
+
+# --- samakan bentuk JSON native -j dengan parser teks ----------------------
+# YABS -j menyimpan RAM/Swap/Disk sebagai ANGKA + satuan terpisah
+# (.mem.ram = 2014876, .mem.ram_units = "KiB"), sedangkan parser teks
+# menghasilkan string siap tampil (".mem.ram" = "1.9 GiB").
+#
+# Skema Astro dan halaman detail mengaharap bentuk kedua, jadi JSON native
+# harus dinormalkan di sini. Tanpa ini, `astro build` gagal dengan
+# "Expected type string, received number" begitu ada VPS yang diimpor dari
+# YABS versi baru (yang mendukung -j).
+#
+# Field asli (.os.vm, .os.uptime, .runtime.elapsed, dan kunci *_units)
+# TIDAK dihapus supaya renderer Markdown dan test lama tidak ikut berubah;
+# yang ditambahkan hanya bentuk yang dibutuhkan konsumen situs.
+#
+# CATATAN: YABS menulis disk_units "KB" padahal nilainya dari `df` (blok 1K),
+# jadi basisnya 1024 - sama seperti asumsi di bench_render.sh.
+hex_yabs_normalisasi() {
+    local in="$1" out="$2" tmp
+    [[ -s "$in" ]] || { printf 'null\n' > "$out"; return 1; }
+
+    tmp="${out}.norm"
+    jq '
+        def human_kib:
+            if . == null then null
+            else . as $v
+              | if    $v >= 1048576 then "\(($v / 1048576 * 100 | round) / 100) GiB"
+                elif $v >= 1024    then "\(($v / 1024    * 100 | round) / 100) MiB"
+                else "\($v) KiB" end
+            end;
+        def memcell(field; unitfield):
+            .[field] as $v
+            | .[unitfield]? as $u
+            | if    $v == null then null
+              elif $u == null then ($v | tostring)
+              elif $u == "KiB" or $u == "MiB" or $u == "KB" or $u == "MB"
+                   or $u == "TiB" or $u == "TB" then ($v | human_kib)
+              else "\($v) \($u)" end;
+        # parser teks menulis .uptime sebagai "3 days, 4 hours, 21 minutes";
+        # bentuk ini supaya dua jalur punya tipe yang sama di UI.
+        def uptime_str:
+            if . == null then null
+            else . as $s
+              | "\(($s / 86400 | floor)) days, \(($s / 3600 | floor) % 24) hours, \(($s / 60 | floor) % 60) minutes"
+            end;
+        .mem = (
+            if (.mem | type) == "object" then
+                { ram:  (.mem | memcell("ram";  "ram_units")),
+                  swap: (.mem | memcell("swap"; "swap_units")),
+                  disk: (.mem | memcell("disk"; "disk_units")) }
+            else .mem end
+        )
+        | .vm     = (.vm     // .os.vm?     // null)
+        | .uptime = (.uptime // (.os.uptime? | uptime_str) // null)
+        | .runtime_sec = (
+            if (.runtime | type) == "object" then (.runtime.elapsed // null)
+            else (.runtime_sec // null) end
+        )
+        | {schema: "yabs", source: "yabs-native-json"} + .
+    ' "$in" > "$tmp" 2>/dev/null
+
+    if [[ $? -eq 0 && -s "$tmp" ]]; then
+        mv "$tmp" "$out"
+        return 0
+    fi
+    rm -f "$tmp"
+    printf 'null\n' > "$out"
+    return 1
+}

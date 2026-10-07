@@ -1,0 +1,312 @@
+{
+  "slug": "jetorbit-1c-2g-jogja",
+  "title": "Jetorbit 1C 2GB Yogyakarta",
+  "provider": "Jetorbit",
+  "provider_legal": "PT Jetorbit Teknologi Indonesia",
+  "location": "Yogyakarta, Indonesia",
+  "price_monthly": 109890,
+  "currency": "IDR",
+  "cpu_cores": 1,
+  "ram_gb": 2,
+  "storage_gb": 25,
+  "storage_type": null,
+  "bandwidth_tb": null,
+  "virtualization": "KVM",
+  "status": "Available",
+  "last_updated": "2025-09-24",
+  "affiliate_link": "https://yukcek.com/jetorbit",
+  "tags": ["KVM", "Indonesia", "Yogyakarta", "2GB RAM", "Intel Broadwell"],
+  "summary": {
+    "geekbench_single": 921,
+    "geekbench_multi": 910,
+    "max_iops": 37800,
+    "max_read_mb_s": 380.5,
+    "max_write_mb_s": 405.8,
+    "dd_avg_mb_s": 382.3,
+    "best_iperf_send": "427 Mbits/sec",
+    "speedtest_best_download": "2514.87 Mbps"
+  },
+  "benchmarks": {
+    "yabs": {
+      "schema": "yabs",
+      "source": "yabs-text-parse",
+      "version": "v2025-04-20",
+      "time": null,
+      "os": {
+        "arch": null,
+        "distro": "Ubuntu 24.04.3 LTS",
+        "kernel": "6.8.0-31-generic"
+      },
+      "uptime": "1 days, 1 hours, 6 minutes",
+      "vm": "KVM",
+      "net": {
+        "ipv4": false,
+        "ipv6": false
+      },
+      "cpu": {
+        "model": "Intel Core Processor (Broadwell, IBRS)",
+        "cores": 1,
+        "freq": "1 @ 2494.430 MHz",
+        "aes": true
+      },
+      "mem": {
+        "ram": "1.9 GiB",
+        "swap": "512.0 MiB",
+        "disk": "24.1 GiB"
+      },
+      "iperf": [
+        {
+          "mode": "IPv4",
+          "provider": "Clouvider",
+          "loc": "London, UK (10G)",
+          "send": "71.6 Mbits/sec",
+          "recv": "78.5 Mbits/sec",
+          "latency": "--"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Eranium",
+          "loc": "Amsterdam, NL (100G)",
+          "send": "65.3 Mbits/sec",
+          "recv": "82.0 Mbits/sec",
+          "latency": "256 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Uztelecom",
+          "loc": "Tashkent, UZ (10G)",
+          "send": "427 Mbits/sec",
+          "recv": "40.9 Mbits/sec",
+          "latency": "244 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Leaseweb",
+          "loc": "Singapore, SG (10G)",
+          "send": "72.1 Mbits/sec",
+          "recv": "84.7 Mbits/sec",
+          "latency": "--"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Clouvider",
+          "loc": "Los Angeles, CA, US (10G)",
+          "send": "65.4 Mbits/sec",
+          "recv": "78.7 Mbits/sec",
+          "latency": "197 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Leaseweb",
+          "loc": "NYC, NY, US (10G)",
+          "send": "60.9 Mbits/sec",
+          "recv": "49.6 Mbits/sec",
+          "latency": "240 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Edgoo",
+          "loc": "Sao Paulo, BR (1G)",
+          "send": "busy",
+          "recv": "20.4 Mbits/sec",
+          "latency": "353 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Clouvider",
+          "loc": "London, UK (10G)",
+          "send": "busy",
+          "recv": "busy",
+          "latency": "--"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Eranium",
+          "loc": "Amsterdam, NL (100G)",
+          "send": "busy",
+          "recv": "2.32 Mbits/sec",
+          "latency": "256 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Uztelecom",
+          "loc": "Tashkent, UZ (10G)",
+          "send": "831 Mbits/sec",
+          "recv": "63.6 Mbits/sec",
+          "latency": "244 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Leaseweb",
+          "loc": "Singapore, SG (10G)",
+          "send": "62.8 Mbits/sec",
+          "recv": "87.2 Mbits/sec",
+          "latency": "30.1 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Clouvider",
+          "loc": "Los Angeles, CA, US (10G)",
+          "send": "70.1 Mbits/sec",
+          "recv": "78.9 Mbits/sec",
+          "latency": "197 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Leaseweb",
+          "loc": "NYC, NY, US (10G)",
+          "send": "61.2 Mbits/sec",
+          "recv": "73.0 Mbits/sec",
+          "latency": "240 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Edgoo",
+          "loc": "Sao Paulo, BR (1G)",
+          "send": "busy",
+          "recv": "9.44 Mbits/sec",
+          "latency": "354 ms"
+        }
+      ],
+      "fio": [
+        {
+          "bs": "4k",
+          "speed_r": 77425,
+          "iops_r": 18900,
+          "speed_w": 77629,
+          "iops_w": 18900,
+          "speed_rw": 155054,
+          "iops_rw": 37800,
+          "speed_units": "KBps"
+        },
+        {
+          "bs": "64k",
+          "speed_r": 333199,
+          "iops_r": 5000,
+          "speed_w": 334950,
+          "iops_w": 5100,
+          "speed_rw": 668160,
+          "iops_rw": 10100,
+          "speed_units": "KBps"
+        },
+        {
+          "bs": "512k",
+          "speed_r": 342313,
+          "iops_r": 652,
+          "speed_w": 360499,
+          "iops_w": 687,
+          "speed_rw": 702822,
+          "iops_rw": 1300,
+          "speed_units": "KBps"
+        },
+        {
+          "bs": "1m",
+          "speed_r": 389622,
+          "iops_r": 371,
+          "speed_w": 415570,
+          "iops_w": 396,
+          "speed_rw": 805202,
+          "iops_rw": 767,
+          "speed_units": "KBps"
+        }
+      ],
+      "geekbench": [
+        {
+          "version": 6,
+          "single": 921,
+          "multi": 910,
+          "url": "https://browser.geekbench.com/v6/cpu/14039279"
+        }
+      ],
+      "ip_info": {
+        "protocol": null,
+        "isp": "PT Ikubaru Indonesia",
+        "asn": "AS135444 PT Ikubaru Indonesia",
+        "org": "PT Jetorbit Teknologi Indonesia",
+        "city": null,
+        "region": null,
+        "region_code": null,
+        "location": "Gamping Lor, Yogyakarta (YO)",
+        "country": "Indonesia"
+      },
+      "runtime_sec": 1405,
+      "raw_file": "yabs.txt"
+    },
+    "benchsh": {
+      "schema": "bench",
+      "source": "bench-text-parse",
+      "version": "v2025-05-08",
+      "time": "2025-09-24 20:51:45 WIB",
+      "cpu": {
+        "model": "Intel Core Processor (Broadwell, IBRS)",
+        "cores": 1,
+        "cores_raw": "1 @ 2494.430 MHz",
+        "freq_mhz": 2494.43,
+        "cache": "16384 KB",
+        "aes": true,
+        "virt_flag": true
+      },
+      "mem": {
+        "ram": "1.9 GB (420.3 MB Used)",
+        "swap": "512.0 MB (524.0 KB Used)",
+        "disk": "24.6 GB (3.1 GB Used)"
+      },
+      "system": {
+        "os": "Ubuntu 24.04.3 LTS",
+        "arch": "x86_64 (64 Bit)",
+        "kernel": "6.8.0-31-generic",
+        "virtualization": "KVM",
+        "tcp_congestion": "cubic",
+        "uptime": "1 days, 0 hour 57 min",
+        "load_average": "0.00, 0.00, 0.00"
+      },
+      "net": {
+        "ipv4": true,
+        "ipv6": true,
+        "organization": "AS135444 PT Ikubaru Indonesia",
+        "location": "Jakarta / ID",
+        "region": "Jakarta"
+      },
+      "io_mb_s": {
+        "run1": 362.0,
+        "run2": 389.0,
+        "run3": 396.0,
+        "average": 382.3
+      },
+      "speedtest": [
+        {
+          "node": "Speedtest.net",
+          "upload": "6928.31 Mbps",
+          "download": "2514.87 Mbps",
+          "latency": "0.85 ms"
+        },
+        {
+          "node": "Paris, FR",
+          "upload": "77.94 Mbps",
+          "download": "88.68 Mbps",
+          "latency": "180.57 ms"
+        },
+        {
+          "node": "Hong Kong, CN",
+          "upload": "58.57 Mbps",
+          "download": "83.84 Mbps",
+          "latency": "43.02 ms"
+        },
+        {
+          "node": "Singapore, SG",
+          "upload": "78.39 Mbps",
+          "download": "28.57 Mbps",
+          "latency": "51.91 ms"
+        },
+        {
+          "node": "Tokyo, JP",
+          "upload": "78.58 Mbps",
+          "download": "88.39 Mbps",
+          "latency": "90.12 ms"
+        }
+      ],
+      "runtime_sec": 167,
+      "raw_file": "benchsh.txt"
+    }
+  }
+}

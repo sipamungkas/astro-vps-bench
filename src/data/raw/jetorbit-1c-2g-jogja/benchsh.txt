@@ -1,0 +1,39 @@
+-------------------- A Bench.sh Script By Teddysun -------------------
+ Version            : v2025-05-08
+ Usage              : wget -qO- bench.sh | bash
+----------------------------------------------------------------------
+ CPU Model          : Intel Core Processor (Broadwell, IBRS)
+ CPU Cores          : 1 @ 2494.430 MHz
+ CPU Cache          : 16384 KB
+ AES-NI             : ✓ Enabled
+ VM-x/AMD-V         : ✓ Enabled
+ Total Disk         : 24.6 GB (3.1 GB Used)
+ Total Mem          : 1.9 GB (420.3 MB Used)
+ Total Swap         : 512.0 MB (524.0 KB Used)
+ System uptime      : 1 days, 0 hour 57 min
+ Load average       : 0.00, 0.00, 0.00
+ OS                 : Ubuntu 24.04.3 LTS
+ Arch               : x86_64 (64 Bit)
+ Kernel             : 6.8.0-31-generic
+ TCP CC             : cubic
+ Virtualization     : KVM
+ IPv4/IPv6          : ✓ Online / ✓ Online
+ Organization       : AS135444 PT Ikubaru Indonesia
+ Location           : Jakarta / ID
+ Region             : Jakarta
+----------------------------------------------------------------------
+ I/O Speed(1st run) : 362 MB/s
+ I/O Speed(2nd run) : 389 MB/s
+ I/O Speed(3rd run) : 396 MB/s
+ I/O Speed(average) : 382.3 MB/s
+----------------------------------------------------------------------
+ Node Name        Upload Speed      Download Speed      Latency     
+ Speedtest.net    6928.31 Mbps      2514.87 Mbps        0.85 ms     
+ Paris, FR        77.94 Mbps        88.68 Mbps          180.57 ms   
+ Hong Kong, CN    58.57 Mbps        83.84 Mbps          43.02 ms    
+ Singapore, SG    78.39 Mbps        28.57 Mbps          51.91 ms    
+ Tokyo, JP        78.58 Mbps        88.39 Mbps          90.12 ms    
+----------------------------------------------------------------------
+ Finished in        : 2 min 47 sec
+ Timestamp          : 2025-09-24 20:51:45 WIB
+----------------------------------------------------------------------

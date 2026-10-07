@@ -265,8 +265,11 @@ hex_parse() {
         yabs)
             hex_ambil_json_yabs "$f" > "$out" 2>/dev/null
             if [[ -s "$out" ]] && jq -e . "$out" >/dev/null 2>&1; then
-                jq '. + {schema:"yabs", source:"yabs-native-json"}' "$out" > "$out.t" \
-                    && mv "$out.t" "$out"
+                # bentuk -j dinormalkan supaya sama dengan hasil parser teks
+                if ! hex_yabs_normalisasi "$out" "$out.t"; then
+                    jq '. + {schema:"yabs", source:"yabs-native-json"}' "$out" > "$out.t"
+                fi
+                mv "$out.t" "$out"
             else
                 : > "$out"
                 hex_yabs_teks "$f" "$out" || return 1

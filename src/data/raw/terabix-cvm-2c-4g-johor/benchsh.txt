@@ -1,0 +1,40 @@
+-------------------- A Bench.sh Script By Teddysun -------------------
+ Version            : v2025-05-08
+ Usage              : wget -qO- bench.sh | bash
+----------------------------------------------------------------------
+ CPU Model          : AMD EPYC 7C13 64-Core Processor
+ CPU Cores          : 2 @ 1996.249 MHz
+ CPU Cache          : 512 KB
+ AES-NI             : ✓ Enabled
+ VM-x/AMD-V         : ✓ Enabled
+ Total Disk         : 29.5 GB (2.8 GB Used)
+ Total Mem          : 3.8 GB (497.6 MB Used)
+ Total Swap         : 512.0 MB (0 Used)
+ System uptime      : 0 days, 0 hour 4 min
+ Load average       : 0.10, 0.34, 0.18
+ OS                 : Ubuntu 24.04.3 LTS
+ Arch               : x86_64 (64 Bit)
+ Kernel             : 6.8.0-60-generic
+ TCP CC             : cubic
+ Virtualization     : KVM
+ IPv4/IPv6          : ✓ Online / ✓ Online
+ Organization       : AS137552 Terabix
+ Location           : Johor Bahru / MY
+ Region             : Johor
+----------------------------------------------------------------------
+ I/O Speed(1st run) : 893 MB/s
+ I/O Speed(2nd run) : 944 MB/s
+ I/O Speed(3rd run) : 922 MB/s
+ I/O Speed(average) : 919.7 MB/s
+----------------------------------------------------------------------
+ Node Name        Upload Speed      Download Speed      Latency     
+ Speedtest.net    996.56 Mbps       939.70 Mbps         1.49 ms     
+ Paris, FR        626.88 Mbps       962.74 Mbps         151.97 ms   
+ Amsterdam, NL    583.32 Mbps       837.30 Mbps         163.24 ms   
+ Shanghai, CN     214.33 Mbps       541.82 Mbps         357.54 ms   
+ Singapore, SG    997.13 Mbps       923.42 Mbps         1.75 ms     
+ Tokyo, JP        952.22 Mbps       931.28 Mbps         84.23 ms    
+----------------------------------------------------------------------
+ Finished in        : 3 min 2 sec
+ Timestamp          : 2025-08-10 23:54:21 WIB
+----------------------------------------------------------------------

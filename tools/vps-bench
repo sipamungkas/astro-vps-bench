@@ -129,14 +129,21 @@ hex_simpan() {
 # Parse satu berkas mentah menjadi JSON di stdout.
 # hex_parse_ke_json <yabs|bench> <berkas_mentah>
 hex_parse_ke_json() {
-    local jenis="$1" f="$2" tmp out
+    local jenis="$1" f="$2" tmp out norm
     tmp="$(mktemp "${TMPDIR:-/tmp}/vb.XXXXXX")"
     out="$(mktemp "${TMPDIR:-/tmp}/vbj.XXXXXX")"
     case "$jenis" in
         yabs)
             hex_ambil_json_yabs "$f" > "$out"
             if [[ -s "$out" ]] && jq -e . "$out" >/dev/null 2>&1; then
-                jq '. + {schema:"yabs", source:"yabs-native-json"}' "$out"
+                # bentuk -j dinormalkan supaya sama dengan hasil parser teks
+                norm="$out.norm"
+                if hex_yabs_normalisasi "$out" "$norm"; then
+                    cat "$norm"
+                else
+                    cat "$out"   # normalisasi gagal: pakai JSON apa adanya
+                fi
+                rm -f "$norm"
             else
                 hex_yabs_teks "$f" "$out" || die "parse YABS gagal"
                 cat "$out"
@@ -173,8 +180,7 @@ cmd_yabs() {
     local json="$dir/.result.json"
     hex_ambil_json_yabs "$raw" >"$json"
     if [[ -s "$json" ]]; then
-        jq '. + {schema:"yabs", source:"yabs-native-json"}' "$json" >"$json.t" \
-            && mv "$json.t" "$json"
+        hex_yabs_normalisasi "$json" "$json.t" && mv "$json.t" "$json" || rm -f "$json.t"
     else
         hex_yabs_teks "$raw" "$json" || die "parse gagal"
     fi

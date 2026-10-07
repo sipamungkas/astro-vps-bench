@@ -41,15 +41,36 @@ def memcell(field; unitfield):
       elif $u == "TiB" or $u == "TB" then ($v | human_kib)
       else "\($v) \($u)" end;
 
-# Uptime bisa string ("14 days, 6 hours") atau angka detik (JSON native).
+# Uptime bisa berupa:
+#   - angka detik (JSON native YABS, mis. 13712.45)
+#   - string verbose dari parser teks. Bentuknya berbeda antar skrip:
+#       YABS     : "14 days, 6 hours, 21 minutes"
+#       bench.sh : "0 days, 4 hour 21 min"   (tanpa koma sebelum menitnya)
+#
+# String diubah jadi detik dulu, lalu diformat ulang dengan cabang angka yang
+# sudah ada. Memangkas tiap bagian secara terpisah keliru untuk bentuk
+# bench.sh: bagian kedua memuat jam DAN menit ("4 hour 21 min"), jadi
+# menitnya ikut hilang kalau tiap bagian dipisah sendiri.
 def dur:
+    def ke_detik:
+        # huruf terakhir menentukan satuan; "s" catching-all ada di akhir.
+        [ scan("([0-9]+) ?(days?|hours?|minutes?|mins?|secs?|s)([^a-zA-Z]|$)") ]
+        | map(.[1] as $u
+              | if   ($u | test("^d")) then (.[0] | tonumber) * 86400
+                elif ($u | test("^h")) then (.[0] | tonumber) * 3600
+                elif ($u | test("^m")) then (.[0] | tonumber) * 60
+                else (.[0] | tonumber) end)
+        | add // 0;
     if . == null then "-"
     elif (type == "number") then . as $s
       | if    $s >= 86400 then "\(($s / 86400 | floor))d \((($s / 3600 | floor) % 24))h \((($s / 60 | floor) % 60))m"
         elif $s >= 3600  then "\(($s / 3600 | floor))h \((($s / 60 | floor) % 60))m"
         elif $s >= 60    then "\(($s / 60 | floor))m \(($s % 60))s"
         else "\($s)s" end
-    else tostring
+    else
+      (tostring) as $t
+      | if ($t | test("[0-9]")) then ($t | ke_detik | dur)
+        else $t end
     end;
 
 def uptimecell: (.uptime // .os.uptime? // null) | dur;

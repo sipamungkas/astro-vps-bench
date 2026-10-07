@@ -1,0 +1,318 @@
+{
+  "slug": "terabix-cvm-2c-4g-johor",
+  "title": "Terabix CVM 2C 4GB Johor",
+  "provider": "Terabix",
+  "provider_legal": "Terabix Technologies Sdn. Bhd",
+  "location": "Johor Bahru, Malaysia",
+  "price_monthly": 6.0,
+  "currency": "USD",
+  "cpu_cores": 2,
+  "ram_gb": 4,
+  "storage_gb": 30,
+  "storage_type": null,
+  "bandwidth_tb": null,
+  "virtualization": "KVM",
+  "status": "Available",
+  "last_updated": "2025-08-10",
+  "affiliate_link": "https://yukcek.com/terabix",
+  "tags": ["KVM", "Malaysia", "Johor", "4GB RAM", "AMD EPYC 7C13"],
+  "summary": {
+    "geekbench_single": 1398,
+    "geekbench_multi": 2550,
+    "max_iops": 155200,
+    "max_read_mb_s": 1597.4,
+    "max_write_mb_s": 1607.7,
+    "dd_avg_mb_s": 919.7,
+    "best_iperf_send": "1.09 Gbits/sec",
+    "speedtest_best_download": "962.74 Mbps"
+  },
+  "benchmarks": {
+    "yabs": {
+      "schema": "yabs",
+      "source": "yabs-text-parse",
+      "version": "v2025-04-20",
+      "time": null,
+      "os": {
+        "arch": null,
+        "distro": "Ubuntu 24.04.3 LTS",
+        "kernel": "6.8.0-60-generic"
+      },
+      "uptime": "0 days, 0 hours, 11 minutes",
+      "vm": "KVM",
+      "net": {
+        "ipv4": false,
+        "ipv6": false
+      },
+      "cpu": {
+        "model": "AMD EPYC 7C13 64-Core Processor",
+        "cores": 2,
+        "freq": "2 @ 1996.249 MHz",
+        "aes": true
+      },
+      "mem": {
+        "ram": "3.8 GiB",
+        "swap": "512.0 MiB",
+        "disk": "29.0 GiB"
+      },
+      "iperf": [
+        {
+          "mode": "IPv4",
+          "provider": "Clouvider",
+          "loc": "London, UK (10G)",
+          "send": "954 Mbits/sec",
+          "recv": "285 Mbits/sec",
+          "latency": "168 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Eranium",
+          "loc": "Amsterdam, NL (100G)",
+          "send": "978 Mbits/sec",
+          "recv": "679 Mbits/sec",
+          "latency": "172 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Uztelecom",
+          "loc": "Tashkent, UZ (10G)",
+          "send": "991 Mbits/sec",
+          "recv": "362 Mbits/sec",
+          "latency": "183 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Leaseweb",
+          "loc": "Singapore, SG (10G)",
+          "send": "1.09 Gbits/sec",
+          "recv": "927 Mbits/sec",
+          "latency": "1.81 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Clouvider",
+          "loc": "Los Angeles, CA, US (10G)",
+          "send": "923 Mbits/sec",
+          "recv": "316 Mbits/sec",
+          "latency": "162 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Leaseweb",
+          "loc": "NYC, NY, US (10G)",
+          "send": "640 Mbits/sec",
+          "recv": "658 Mbits/sec",
+          "latency": "230 ms"
+        },
+        {
+          "mode": "IPv4",
+          "provider": "Edgoo",
+          "loc": "Sao Paulo, BR (1G)",
+          "send": "busy",
+          "recv": "156 Mbits/sec",
+          "latency": "340 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Clouvider",
+          "loc": "London, UK (10G)",
+          "send": "947 Mbits/sec",
+          "recv": "200 Mbits/sec",
+          "latency": "168 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Eranium",
+          "loc": "Amsterdam, NL (100G)",
+          "send": "976 Mbits/sec",
+          "recv": "673 Mbits/sec",
+          "latency": "172 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Uztelecom",
+          "loc": "Tashkent, UZ (10G)",
+          "send": "886 Mbits/sec",
+          "recv": "468 Mbits/sec",
+          "latency": "183 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Leaseweb",
+          "loc": "Singapore, SG (10G)",
+          "send": "1.09 Gbits/sec",
+          "recv": "858 Mbits/sec",
+          "latency": "--"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Clouvider",
+          "loc": "Los Angeles, CA, US (10G)",
+          "send": "943 Mbits/sec",
+          "recv": "busy",
+          "latency": "162 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Leaseweb",
+          "loc": "NYC, NY, US (10G)",
+          "send": "647 Mbits/sec",
+          "recv": "639 Mbits/sec",
+          "latency": "230 ms"
+        },
+        {
+          "mode": "IPv6",
+          "provider": "Edgoo",
+          "loc": "Sao Paulo, BR (1G)",
+          "send": "busy",
+          "recv": "190 Mbits/sec",
+          "latency": "340 ms"
+        }
+      ],
+      "fio": [
+        {
+          "bs": "4k",
+          "speed_r": 317583,
+          "iops_r": 77500,
+          "speed_w": 318423,
+          "iops_w": 77700,
+          "speed_rw": 636006,
+          "iops_rw": 155200,
+          "speed_units": "KBps"
+        },
+        {
+          "bs": "64k",
+          "speed_r": 1635779,
+          "iops_r": 24400,
+          "speed_w": 1646264,
+          "iops_w": 24500,
+          "speed_rw": 3282043,
+          "iops_rw": 49000,
+          "speed_units": "KBps"
+        },
+        {
+          "bs": "512k",
+          "speed_r": 292035,
+          "iops_r": 557,
+          "speed_w": 307558,
+          "iops_w": 586,
+          "speed_rw": 599603,
+          "iops_rw": 1100,
+          "speed_units": "KBps"
+        },
+        {
+          "bs": "1m",
+          "speed_r": 1509949,
+          "iops_r": 1400,
+          "speed_w": 1604321,
+          "iops_w": 1500,
+          "speed_rw": 3124756,
+          "iops_rw": 2900,
+          "speed_units": "KBps"
+        }
+      ],
+      "geekbench": [
+        {
+          "version": 6,
+          "single": 1398,
+          "multi": 2550,
+          "url": "https://browser.geekbench.com/v6/cpu/13258285"
+        }
+      ],
+      "ip_info": {
+        "protocol": null,
+        "isp": "Terabix",
+        "asn": "AS137552 Terabix",
+        "org": "Terabix Technologies Sdn. Bhd",
+        "city": null,
+        "region": null,
+        "region_code": null,
+        "location": "Johor Bahru, Johor (01)",
+        "country": "Malaysia"
+      },
+      "runtime_sec": 913,
+      "raw_file": "yabs.txt"
+    },
+    "benchsh": {
+      "schema": "bench",
+      "source": "bench-text-parse",
+      "version": "v2025-05-08",
+      "time": "2025-08-10 23:54:21 WIB",
+      "cpu": {
+        "model": "AMD EPYC 7C13 64-Core Processor",
+        "cores": 2,
+        "cores_raw": "2 @ 1996.249 MHz",
+        "freq_mhz": 1996.249,
+        "cache": "512 KB",
+        "aes": true,
+        "virt_flag": true
+      },
+      "mem": {
+        "ram": "3.8 GB (497.6 MB Used)",
+        "swap": "512.0 MB (0 Used)",
+        "disk": "29.5 GB (2.8 GB Used)"
+      },
+      "system": {
+        "os": "Ubuntu 24.04.3 LTS",
+        "arch": "x86_64 (64 Bit)",
+        "kernel": "6.8.0-60-generic",
+        "virtualization": "KVM",
+        "tcp_congestion": "cubic",
+        "uptime": "0 days, 0 hour 4 min",
+        "load_average": "0.10, 0.34, 0.18"
+      },
+      "net": {
+        "ipv4": true,
+        "ipv6": true,
+        "organization": "AS137552 Terabix",
+        "location": "Johor Bahru / MY",
+        "region": "Johor"
+      },
+      "io_mb_s": {
+        "run1": 893.0,
+        "run2": 944.0,
+        "run3": 922.0,
+        "average": 919.7
+      },
+      "speedtest": [
+        {
+          "node": "Speedtest.net",
+          "upload": "996.56 Mbps",
+          "download": "939.70 Mbps",
+          "latency": "1.49 ms"
+        },
+        {
+          "node": "Paris, FR",
+          "upload": "626.88 Mbps",
+          "download": "962.74 Mbps",
+          "latency": "151.97 ms"
+        },
+        {
+          "node": "Amsterdam, NL",
+          "upload": "583.32 Mbps",
+          "download": "837.30 Mbps",
+          "latency": "163.24 ms"
+        },
+        {
+          "node": "Shanghai, CN",
+          "upload": "214.33 Mbps",
+          "download": "541.82 Mbps",
+          "latency": "357.54 ms"
+        },
+        {
+          "node": "Singapore, SG",
+          "upload": "997.13 Mbps",
+          "download": "923.42 Mbps",
+          "latency": "1.75 ms"
+        },
+        {
+          "node": "Tokyo, JP",
+          "upload": "952.22 Mbps",
+          "download": "931.28 Mbps",
+          "latency": "84.23 ms"
+        }
+      ],
+      "runtime_sec": 182,
+      "raw_file": "benchsh.txt"
+    }
+  }
+}
