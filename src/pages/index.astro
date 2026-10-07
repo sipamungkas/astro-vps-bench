@@ -28,10 +28,26 @@ const countries = [
 const nmb = num;
 
 /**
+ * iperf send to Mbit/s, purely so the column can be sorted numerically.
+ *
+ * `summary.best_iperf_send` is a string like "4.46 Gbits/sec" because YABS
+ * keeps each node's own unit. Sorting that as text would put "935 Mbits/sec"
+ * above "4.46 Gbits/sec", so it has to be a number here. Mirrors toMbps() in
+ * the detail page.
+ */
+function toMbps(s: string | null | undefined): number | null {
+  if (!s || s === 'busy') return null;
+  const m = String(s).match(/^([\d.]+)\s*([KMG])/i);
+  if (!m) return null;
+  const mult = { k: 1e-3, m: 1, g: 1e3 }[m[2]!.toLowerCase()]!;
+  return parseFloat(m[1]!) * mult;
+}
+
+/**
  * Row model.
  *
- * Only fields the table and the filters actually read are sent to the browser;
- * the `benchmarks` block stays out of the payload.
+ * Only fields the table, the filters and the sort read are sent to the
+ * browser; the `benchmarks` block stays out of the payload.
  */
 const rows = allVps.map((v) => {
   const d = v.data;
@@ -53,6 +69,7 @@ const rows = allVps.map((v) => {
     gb: d.summary.geekbench_single ?? null,
     iops: d.summary.max_iops ?? null,
     net: d.summary.best_iperf_send ?? null,
+    netMbps: toMbps(d.summary.best_iperf_send),
   };
 });
 
@@ -148,10 +165,7 @@ rows.sort((a, b) => (b.iops ?? -1) - (a.iops ?? -1));
       </span>
     </p>
     <p class="flex items-center gap-2 text-[12px] text-ink-tertiary">
-      Sorted by max IOPS, high to low
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M6 9l6 6 6-6" />
-      </svg>
+      <span id="sort-label" aria-live="polite">Sorted by max IOPS, high to low</span>
     </p>
   </section>
 
@@ -162,12 +176,42 @@ rows.sort((a, b) => (b.iops ?? -1) - (a.iops ?? -1));
         <thead>
           <tr class="border-b border-ink">
             <th class="w-11"><span class="sr-only">Select</span></th>
-            <th>Plan</th>
-            <th class="text-right">Price</th>
+            <th aria-sort="none">
+              <button type="button" data-sort="title" class="th-sort">
+                Plan
+                <span class="th-sort__icon" aria-hidden="true"></span>
+              </button>
+            </th>
+            <th class="text-right" aria-sort="none">
+              <button type="button" data-sort="price" class="th-sort">
+                Price
+                <span class="th-sort__icon" aria-hidden="true"></span>
+              </button>
+            </th>
             <th>Specification</th>
-            <th class="text-right">CPU score</th>
-            <th class="text-right">Max IOPS</th>
-            <th class="text-right">Network</th>
+            <th class="text-right" aria-sort="none">
+              <button type="button" data-sort="gb" class="th-sort">
+                CPU score
+                <span class="th-sort__icon" aria-hidden="true"></span>
+              </button>
+            </th>
+            <th class="text-right" aria-sort="descending">
+              <button
+                type="button"
+                data-sort="iops"
+                class="th-sort is-active"
+                data-direction="desc"
+              >
+                Max IOPS
+                <span class="th-sort__icon" aria-hidden="true"></span>
+              </button>
+            </th>
+            <th class="text-right" aria-sort="none">
+              <button type="button" data-sort="netMbps" class="th-sort">
+                Network
+                <span class="th-sort__icon" aria-hidden="true"></span>
+              </button>
+            </th>
             <th class="text-right"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
@@ -179,6 +223,11 @@ rows.sort((a, b) => (b.iops ?? -1) - (a.iops ?? -1));
                 data-title={r.title}
                 data-provider={r.provider}
                 data-country={r.country}
+                data-sort-title={r.title.toLowerCase()}
+                data-sort-price={r.price === null ? '' : String(r.price)}
+                data-sort-gb={r.gb === null ? '' : String(r.gb)}
+                data-sort-iops={r.iops === null ? '' : String(r.iops)}
+                data-sort-net-mbps={r.netMbps === null ? '' : String(r.netMbps)}
                 data-search={`${r.provider} ${r.title} ${r.location} ${r.storageType} ${r.virt}`.toLowerCase()}
               >
                 <td>
@@ -357,8 +406,107 @@ rows.sort((a, b) => (b.iops ?? -1) - (a.iops ?? -1));
 
       const trs = Array.from(tbody.querySelectorAll('tr'));
       const boxes = Array.from(tbody.querySelectorAll('input[type=checkbox]'));
+      const sortButtons = Array.from(document.querySelectorAll('[data-sort]'));
+      const sortLabel = document.getElementById('sort-label');
+
+      /**
+       * Sort state.
+       *
+       * Keys are camelCase and map to `data-sort-<kebab-case>` on each row,
+       * which the DOM exposes as `dataset.sortCamelCase`. `netMbps` is the
+       * reason the two spellings differ: the header says Mbit/s, so the
+       * attribute is `data-sort-net-mbps`.
+       *
+       * `hint` is appended to the live label where sorting alone would
+       * mislead. Price is the important one: the dataset spans IDR and USD,
+       * and `price_monthly` is a bare number with no FX rate, so sorting it
+       * puts a 6.00 USD plan below a 90,000 IDR one without either being
+       * wrong. Ranking by the raw figure is still the least surprising
+       * behaviour (it matches the column), but the label says so.
+       */
+      const SORTS = {
+        title: { label: 'Plan' },
+        price: { label: 'Price', hint: 'as listed, currencies not converted' },
+        gb: { label: 'CPU score' },
+        iops: { label: 'Max IOPS' },
+        netMbps: { label: 'Network' },
+      };
+
+      let sortKey = 'iops';
+      let sortDir = 'desc';
 
       const visibleRows = () => trs.filter((tr) => tr.style.display !== 'none');
+
+      /**
+       * Empty values always sink, whatever the direction.
+       *
+       * A plan whose Geekbench did not run should not outrank one that scored
+       * 1,398 just because "" sorts high ascending. Sorting by known values and
+       * then moving the unknown ones to the end gives the same answer in both
+       * directions, so the first click is never a lie about the data.
+       */
+      function sortRows() {
+        const attr = 'sort' + sortKey[0].toUpperCase() + sortKey.slice(1);
+        const rank = (tr) => {
+          const raw = tr.dataset[attr] ?? '';
+          if (raw === '') return null;
+          const n = Number(raw);
+          return Number.isNaN(n) ? raw : n;
+        };
+
+        const sorted = trs.slice().sort((a, b) => {
+          const ra = rank(a);
+          const rb = rank(b);
+          if (ra === null && rb === null) return 0;
+          if (ra === null) return 1;
+          if (rb === null) return -1;
+          let cmp;
+          if (typeof ra === 'number' && typeof rb === 'number') cmp = ra - rb;
+          else cmp = String(ra).localeCompare(String(rb));
+          return sortDir === 'asc' ? cmp : -cmp;
+        });
+
+        // Reordering the DOM moves each <tr> with its checkbox state intact, so
+        // the selection bar needs no extra bookkeeping.
+        for (const tr of sorted) tbody.appendChild(tr);
+      }
+
+      function syncSortUi() {
+        for (const btn of sortButtons) {
+          const active = btn.dataset.sort === sortKey;
+          const th = btn.closest('th');
+          th.setAttribute('aria-sort', active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+          btn.classList.toggle('is-active', active);
+          btn.dataset.direction = active ? sortDir : '';
+        }
+        // Only the first character is lowered: "Max IOPS" must not become
+        // "max iops", which reads like a typo next to the other labels.
+        const { label, hint } = SORTS[sortKey];
+        sortLabel.textContent = 'Sorted by ' + label.charAt(0).toLowerCase() + label.slice(1) + ', ' +
+          (sortDir === 'asc' ? 'low to high' : 'high to low') +
+          (hint ? ' (' + hint + ')' : '');
+      }
+
+      function applySort() {
+        sortRows();
+        syncSortUi();
+      }
+
+      for (const btn of sortButtons) {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.sort;
+          // Clicking the active column flips direction; a new column starts
+          // descending, since every column here is a "bigger is better" score
+          // except price and the name.
+          if (key === sortKey) {
+            sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+          } else {
+            sortKey = key;
+            sortDir = key === 'price' || key === 'title' ? 'asc' : 'desc';
+          }
+          applySort();
+        });
+      }
 
       function applyFilters() {
         const term = q.value.trim().toLowerCase();
@@ -428,6 +576,10 @@ rows.sort((a, b) => (b.iops ?? -1) - (a.iops ?? -1));
         updateSelection();
       });
 
+      // Rows are already emitted in iops-descending order server-side, and the
+      // header markup carries that state, so the first paint needs no
+      // sorting. syncSortUi() only keeps the two from drifting apart.
+      syncSortUi();
       applyFilters();
       updateSelection();
     })();

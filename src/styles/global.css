@@ -196,6 +196,68 @@ select {
   color: var(--color-ink);
 }
 
+/* ------------------------------------------------------------------ *
+ * Sortable column headers
+ *
+ * The header cell becomes a button so it is reachable by keyboard and
+ * announced as such. The arrow is a CSS ::after rather than an inline
+ * SVG so the active column can rotate it without touching the DOM.
+ * ------------------------------------------------------------------ */
+
+.dtable .th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+
+.dtable .th-sort:hover {
+  color: var(--color-ink);
+}
+
+.dtable .th-sort:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* Right-aligned headers sit flush right, so the arrow goes first. */
+.dtable th.text-right .th-sort {
+  flex-direction: row-reverse;
+}
+
+.dtable .th-sort__icon {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  border-right: 3.5px solid transparent;
+  border-bottom: 5px solid currentColor;
+  border-left: 3.5px solid transparent;
+  transition: opacity 0.12s ease;
+}
+
+.dtable .th-sort:hover .th-sort__icon {
+  opacity: 0.4;
+}
+
+.dtable .th-sort.is-active {
+  color: var(--color-ink);
+}
+
+.dtable .th-sort.is-active .th-sort__icon {
+  opacity: 1;
+}
+
+/* Descending first, since most columns are "bigger is better". */
+.dtable .th-sort.is-active[data-direction='desc'] .th-sort__icon {
+  transform: rotate(180deg);
+}
+
 /* Best-in-row marker on the compare page. */
 .best-tag {
   font-family: var(--font-data);
