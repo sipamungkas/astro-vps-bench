@@ -103,6 +103,65 @@ Kirim skrip ke server, ambil hasilnya, lalu parse di lokal:
 ./tools/vps-bench yabs-parse hasil-yabs.txt -o /tmp/cek   # JSON + Markdown
 ```
 
+### Tanpa clone repo: satu perintah curl
+
+`tools/vps-bench-standalone` menjalankan YABS.sh lalu bench.sh di satu host
+dan mencetak JSON siap-salin. Tidak butuh checkout repo, cuma `bash`, `jq`,
+`curl`, dan `ssh`.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sipamungkas/astro-vps-bench/main/tools/vps-bench-standalone \
+  | bash -s -- vps-saya \
+      --slug nevacloud-nvme-jkt \
+      --title "Nevacloud NVMe Jakarta" \
+      --provider "Nevacloud (PT Deneva)" \
+      --location "Jakarta, Indonesia" \
+      --price 90000 --currency IDR \
+      --cpu-cores 1 --ram-gb 1 --storage-gb 20 --storage-type NVMe \
+      --bandwidth-tb 1 --virtualization KVM --status Available \
+      --affiliate https://yukcek.com/nevacloud \
+      --tag KVM --tag Jakarta
+```
+
+Metadata juga bisa lewat env (`VBENCH_SLUG`, `VBENCH_TITLE`, ...) supaya
+perintahnya pendek.
+
+Hasilnya:
+
+- **stdout** JSON final, persis format `src/data/vps/<slug>.json`
+- **stderr** progres dan perintah `cp` siap pakai
+- **folder** `./bench-results/<slug>/<stempel>/` berisi `yabs.txt`,
+  `benchsh.txt`, dan `<slug>.json`
+
+Repo aktif tidak pernah disentuh, jadi JSON-nya disalin manual:
+
+```bash
+cp bench-results/<slug>/<stempel>/<slug>.json  src/data/vps/
+mkdir -p src/data/raw/<slug>
+cp bench-results/<slug>/<stempel>/{yabs,benchsh}.txt src/data/raw/<slug>/
+pnpm build
+```
+
+Berkas mentah bisa dipakai ulang tanpa SSH lewat `--only-parse`, berguna
+kalau hasil YABS-nya sudah ada di komputer lokal:
+
+```bash
+./tools/vps-bench-standalone --only-parse <folder-berkas-mentah> \
+  --slug <slug> --title <judul> --provider <nama> --location <lokasi>
+```
+
+Parser **tidak** ditulis ulang di skrip standalone. Berkas itu mengunduh
+`tools/lib/bench_parse.sh` dan `tools/lib/astro_data.sh` dari repo lalu
+mem-`-source`-nya, jadi hanya ada satu implementasi parser. Parser lokal
+dipakai kalau `VBENCH_LIB_DIR` diisi, berguna untuk mode offline:
+
+```bash
+VBENCH_LIB_DIR=tools/lib ./tools/vps-bench-standalone ...
+```
+
+Butuh `tools/lib/*.sh` sudah ada di branch yang dipilih. Ganti targetnya
+dengan env `VBENCH_REPO` dan `VBENCH_REF`.
+
 ### Perintah lain
 
 | Perintah | Fungsi |
@@ -113,6 +172,7 @@ Kirim skrip ke server, ambil hasilnya, lalu parse di lokal:
 | `vps-bench bench-parse <file>` | Parse teks bench.sh → JSON + Markdown |
 | `vps-bench md <file.json>` | Render JSON menjadi Markdown |
 | `vps-bench migrate` | Ubah data `.md` lama menjadi JSON + raw terpisah |
+| `vps-bench-standalone <host>` | Jalankan YABS + bench.sh tanpa clone repo |
 
 Butuh hanya `bash`, `jq`, `ssh`, `curl`. `bash 3.2` (default macOS) sudah
 cukup. Tanpa dependensi Node atau Python.
