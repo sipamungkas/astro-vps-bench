@@ -85,7 +85,9 @@ gen_yabs() {
     echo -e '# https://github.com/masonr/yet-another-bench-script #'
     echo -e '# ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## #'
     echo -e
-    date
+    # Tanggal dikunci, bukan `date`. Kalau memakai date, setiap `pnpm test`
+    # menulis ulang fixture dan working tree jadi tidak bersih.
+    echo "Tue Sep 22 03:14:05 UTC 2026"
     echo -e
     echo -e "Basic System Information:"
     echo -e "---------------------------------"
