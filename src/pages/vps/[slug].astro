@@ -1,7 +1,8 @@
 ---
 import { getCollection, type CollectionEntry } from "astro:content";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import Layout from "../../layouts/Layout.astro";
-import { parseFioOutput, parseIperfOutput } from "../../utils/parsers";
 import FioTable from "../../components/FioTable.astro";
 import IperfTable from "../../components/IperfTable.astro";
 import AffiliateButton from "../../components/AffiliateButton.astro";
@@ -9,7 +10,9 @@ import AffiliateButton from "../../components/AffiliateButton.astro";
 export async function getStaticPaths() {
   const vpsEntries = await getCollection("vps");
   return vpsEntries.map((entry) => ({
-    params: { slug: entry.slug },
+    // `slug` diambil dari data, bukan dari entry: glob loader tidak
+    // menyediakan properti `slug`, tapi field `slug` ada di tiap JSON.
+    params: { slug: entry.data.slug },
     props: { entry },
   }));
 }
@@ -20,17 +23,57 @@ interface Props {
 
 const { entry } = Astro.props;
 const { data } = entry;
+const summary = data.summary;
+const yabs = data.benchmarks.yabs;
+const bench = data.benchmarks.benchsh;
 
-const fioResults = parseFioOutput(data.raw_yabs_output);
-const iperf4Results = parseIperfOutput(data.raw_yabs_output, "IPv4");
-const iperf6Results = parseIperfOutput(data.raw_yabs_output, "IPv6");
+/**
+ * Output mentah dibaca dari disk saat build, bukan disimpan di JSON.
+ * Sumber: src/data/raw/<slug>/*.txt
+ *
+ * Path dihitung dari process.cwd() (root proyek saat `astro build`), bukan
+ * dari import.meta.url - di bundle build, import.meta.url menunjuk lokasi
+ * artefak Vite, bukan file sumber.
+ */
+const RAW_DIR = join(process.cwd(), "src", "data", "raw");
 
-function daysAgo(date) {
-  const now = new Date();
-  const diff = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-  return diff === 0 ? 'today' : `${diff} day${diff > 1 ? 's' : ''} ago`;
+function readRaw(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const p = join(RAW_DIR, data.slug, name);
+  if (!existsSync(p)) return null;
+  try {
+    return readFileSync(p, "utf8");
+  } catch {
+    return null;
+  }
 }
+
+const rawYabs = readRaw(yabs?.raw_file);
+const rawBench = readRaw(bench?.raw_file);
+
+const fioResults = (yabs?.fio ?? []).filter((f) => f.bs);
+const iperf4 = (yabs?.iperf ?? []).filter((r) => (r.mode ?? "IPv4") === "IPv4");
+const iperf6 = (yabs?.iperf ?? []).filter((r) => r.mode === "IPv6");
+
+function fmtMoney(n: number | null | undefined, cur: string | null | undefined) {
+  if (n === null || n === undefined || !cur) return "—";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: cur }).format(n);
+}
+
+function daysAgo(dateStr: string | null | undefined) {
+  if (!dateStr) return "unknown";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  const diff = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+  return diff <= 0 ? "today" : `${diff} day${diff > 1 ? "s" : ""} ago`;
+}
+
+const nmb = (n: number | null | undefined) =>
+  n === null || n === undefined ? "—" : n.toLocaleString("en-US");
+const mbs = (n: number | null | undefined) =>
+  n === null || n === undefined ? "—" : `${n.toLocaleString("en-US")} MB/s`;
 ---
+
 <Layout title={data.title}>
   <div class="max-w-5xl mx-auto px-2 md:px-0">
     <!-- Header -->
@@ -41,147 +84,190 @@ function daysAgo(date) {
         </span>
         <div class="flex flex-col">
           <h1 class="text-2xl font-extrabold text-gray-900 leading-tight">{data.title}</h1>
-          <span class="text-sm text-gray-400 flex items-center gap-1"><svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 12.414a4 4 0 10-1.414 1.414l4.243 4.243a1 1 0 001.414-1.414z"/></svg>{data.location}</span>
+          <span class="text-sm text-gray-400 flex items-center gap-1">{data.location ?? "—"}</span>
         </div>
       </div>
-      <button class="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-2 rounded-lg font-semibold flex items-center gap-2 shadow hover:scale-105 hover:brightness-110 transition text-sm mt-4 md:mt-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg> Add to Comparison</button>
+      <a href={`/compare?ids=${data.slug}`} class="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-2 rounded-lg font-semibold flex items-center gap-2 shadow hover:scale-105 hover:brightness-110 transition text-sm mt-4 md:mt-0 self-start">
+        Add to Comparison
+      </a>
     </div>
+
     <!-- Hero Card -->
     <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl shadow-lg p-6 mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
       <div class="flex flex-col gap-2">
         <div class="flex items-center gap-2 mb-2">
-          <span class="text-3xl font-extrabold text-blue-700">{new Intl.NumberFormat('en-US', { style: 'currency', currency: data.currency }).format(data.price_monthly)}</span>
+          <span class="text-3xl font-extrabold text-blue-700">{fmtMoney(data.price_monthly, data.currency)}</span>
           <span class="text-base text-gray-400">/month</span>
-          <span class="ml-2 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">{data.status}</span>
+          <span class="ml-2 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">{data.status ?? "Unknown"}</span>
         </div>
         <div class="flex flex-wrap gap-2 mt-2">
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18V6h12v12H6z"/></svg>{data.cpu_cores} CPU</span>
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-cyan-100 text-cyan-700 text-xs font-semibold"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>{data.ram_gb} GB RAM</span>
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>{data.storage_gb} GB {data.storage_type}</span>
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 text-xs font-semibold"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>{data.bandwidth_tb} TB BW</span>
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>{data.virtualization}</span>
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{data.cpu_cores ?? "—"} CPU</span>
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-cyan-100 text-cyan-700 text-xs font-semibold">{data.ram_gb ?? "—"} GB RAM</span>
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">{data.storage_gb ?? "—"} GB {data.storage_type ?? ""}</span>
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 text-xs font-semibold">{data.bandwidth_tb ?? "—"} TB BW</span>
+          {data.virtualization && (
+            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">{data.virtualization}</span>
+          )}
         </div>
-        <div class="flex items-center gap-2 mt-4">
-          <AffiliateButton link={data.affiliate_link} providerName="Purchase VPS" />
-        </div>
+        {data.provider_legal && (
+          <p class="text-xs text-gray-400 mt-1">Legal entity: {data.provider_legal}</p>
+        )}
+        {data.affiliate_link && (
+          <div class="flex items-center gap-2 mt-4">
+            <AffiliateButton link={data.affiliate_link} providerName="Purchase VPS" />
+          </div>
+        )}
       </div>
       <div class="flex flex-col gap-2 items-end text-xs text-gray-400">
-        <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/></svg>Last updated {daysAgo(data.last_updated)}</span>
-        <div class="flex flex-wrap gap-1 mt-2">
-          {data.tags.map(tag => (<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono tracking-wide">{tag}</span>))}
+        <span>Last updated {daysAgo(data.last_updated)}</span>
+        <div class="flex flex-wrap gap-1 mt-2 justify-end">
+          {data.tags.map((tag) => (<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono tracking-wide">{tag}</span>))}
         </div>
       </div>
     </div>
+
+    <!-- Benchmark Summary Tiles -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white border border-blue-100 rounded-xl p-5 flex flex-col items-center shadow-sm">
+        <span class="text-2xl font-extrabold text-blue-700">{nmb(summary.geekbench_single)}</span>
+        <span class="text-xs text-gray-500 mt-1">Geekbench SC</span>
+      </div>
+      <div class="bg-white border border-blue-100 rounded-xl p-5 flex flex-col items-center shadow-sm">
+        <span class="text-2xl font-extrabold text-blue-700">{nmb(summary.geekbench_multi)}</span>
+        <span class="text-xs text-gray-500 mt-1">Geekbench MC</span>
+      </div>
+      <div class="bg-white border border-blue-100 rounded-xl p-5 flex flex-col items-center shadow-sm">
+        <span class="text-2xl font-extrabold text-cyan-700">{nmb(summary.max_iops)}</span>
+        <span class="text-xs text-gray-500 mt-1">Max IOPS</span>
+      </div>
+      <div class="bg-white border border-blue-100 rounded-xl p-5 flex flex-col items-center shadow-sm">
+        <span class="text-2xl font-extrabold text-cyan-700">{mbs(summary.dd_avg_mb_s ?? summary.max_write_mb_s)}</span>
+        <span class="text-xs text-gray-500 mt-1">Avg MB/s</span>
+      </div>
+    </div>
+
     <!-- Overview Grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <!-- System Information Card -->
-      <div class="bg-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm hover:shadow-lg transition">
-        <h3 class="font-bold text-lg mb-2 text-blue-700 flex items-center gap-2"><svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18V6h12v12H6z"/></svg>System Information</h3>
+      <!-- System Information -->
+      <div class="bg-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm">
+        <h3 class="font-bold text-lg mb-2 text-blue-700">System Information</h3>
         <div class="text-sm flex flex-col gap-1">
           <div><span class="font-semibold text-gray-700">Provider:</span> {data.provider}</div>
           <div><span class="font-semibold text-gray-700">Plan:</span> {data.title}</div>
-          <div><span class="font-semibold text-gray-700">CPU Cores:</span> {data.cpu_cores}</div>
-          <div><span class="font-semibold text-gray-700">RAM:</span> {data.ram_gb}GB</div>
-          <div><span class="font-semibold text-gray-700">Storage:</span> {data.storage_gb}GB {data.storage_type}</div>
-          <div><span class="font-semibold text-gray-700">Location:</span> {data.location}</div>
-          <div><span class="font-semibold text-gray-700">Virtualization:</span> {data.virtualization}</div>
+          <div><span class="font-semibold text-gray-700">CPU Cores:</span> {data.cpu_cores ?? "—"}</div>
+          <div><span class="font-semibold text-gray-700">RAM:</span> {data.ram_gb ?? "—"}GB</div>
+          <div><span class="font-semibold text-gray-700">Storage:</span> {data.storage_gb ?? "—"}GB {data.storage_type ?? ""}</div>
+          <div><span class="font-semibold text-gray-700">Location:</span> {data.location ?? "—"}</div>
+          <div><span class="font-semibold text-gray-700">Virtualization:</span> {data.virtualization ?? "—"}</div>
+          {yabs?.os?.distro && <div><span class="font-semibold text-gray-700">OS:</span> {yabs.os.distro}</div>}
+          {yabs?.os?.kernel && <div><span class="font-semibold text-gray-700">Kernel:</span> {yabs.os.kernel}</div>}
+          {yabs?.cpu?.model && <div><span class="font-semibold text-gray-700">CPU:</span> {yabs.cpu.model}</div>}
+          {bench?.net?.organization && <div><span class="font-semibold text-gray-700">Network:</span> {bench.net.organization}</div>}
         </div>
       </div>
-      <!-- Geekbench Results Card -->
-      <div class="bg-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm hover:shadow-lg transition">
-        <h3 class="font-bold text-lg mb-2 text-blue-700 flex items-center gap-2"><svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01"/></svg>Geekbench Results</h3>
-        <div class="flex gap-4 mb-2">
-          <div class="flex flex-col items-center bg-blue-50 rounded-lg px-4 py-2">
-            <span class="text-2xl font-bold text-gray-900">—</span>
-            <span class="text-xs text-gray-500">Single-Core Score</span>
-          </div>
-          <div class="flex flex-col items-center bg-blue-50 rounded-lg px-4 py-2">
-            <span class="text-2xl font-bold text-gray-900">—</span>
-            <span class="text-xs text-gray-500">Multi-Core Score</span>
-          </div>
-        </div>
-        <span class="text-xs text-gray-400">(Run Geekbench on this VPS to see results!)</span>
-      </div>
-      <!-- Pricing Card -->
-      <div class="bg-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm hover:shadow-lg transition">
-        <h3 class="font-bold text-lg mb-2 text-blue-700 flex items-center gap-2"><svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>Pricing</h3>
-        <div class="flex flex-col gap-2 mb-2">
-          <div class="bg-blue-50 rounded-lg px-4 py-2 flex flex-col items-center">
-            <span class="text-2xl font-bold text-blue-700">{new Intl.NumberFormat('en-US', { style: 'currency', currency: data.currency }).format(data.price_monthly)}</span>
-            <span class="text-xs text-gray-500">per month</span>
-          </div>
-        </div>
-        <AffiliateButton link={data.affiliate_link} providerName="Purchase VPS" />
-      </div>
-    </div>
-    <!-- Benchmarks Stat Blocks -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-      <!-- Disk I/O Performance -->
-      <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-6 shadow-sm hover:shadow-lg transition">
-        <h3 class="font-bold text-lg mb-4 text-blue-700 flex items-center gap-2"><svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Disk I/O Performance</h3>
+
+      <!-- Disk I/O -->
+      <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm">
+        <h3 class="font-bold text-lg mb-2 text-blue-700">Disk I/O Performance</h3>
         <div class="flex gap-6 mb-2">
           <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-blue-700">{fioResults.length > 0 ? fioResults[0].read : '—'}</span>
-            <span class="text-xs text-gray-500">Read Speed</span>
+            <span class="text-2xl font-bold text-blue-700">{mbs(summary.max_read_mb_s)}</span>
+            <span class="text-xs text-gray-500">Max Read</span>
           </div>
           <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-blue-700">{fioResults.length > 0 ? fioResults[0].write : '—'}</span>
-            <span class="text-xs text-gray-500">Write Speed</span>
+            <span class="text-2xl font-bold text-blue-700">{mbs(summary.max_write_mb_s)}</span>
+            <span class="text-xs text-gray-500">Max Write</span>
           </div>
         </div>
-        <div class="mt-2 text-xs text-gray-500 flex items-center gap-1"><span>Best for:</span> <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">🗄️ Storage, 🕸️ Web</span></div>
+        <span class="text-xs text-gray-400">fio mixed R/W 50/50</span>
       </div>
-      <!-- Network Performance -->
-      <div class="bg-gradient-to-br from-cyan-50 to-white border border-blue-100 rounded-xl p-6 shadow-sm hover:shadow-lg transition">
-        <h3 class="font-bold text-lg mb-4 text-blue-700 flex items-center gap-2"><svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>Network Performance</h3>
+
+      <!-- Network -->
+      <div class="bg-gradient-to-br from-cyan-50 to-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm">
+        <h3 class="font-bold text-lg mb-2 text-cyan-700">Network Performance</h3>
         <div class="flex gap-6 mb-2">
           <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-cyan-700">{iperf4Results.length > 0 ? iperf4Results[0].sendSpeed : '—'}</span>
-            <span class="text-xs text-gray-500">Send Speed</span>
+            <span class="text-2xl font-bold text-cyan-700">{summary.best_iperf_send ?? "—"}</span>
+            <span class="text-xs text-gray-500">Best Send (IPv4)</span>
           </div>
           <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-cyan-700">{iperf4Results.length > 0 ? iperf4Results[0].recvSpeed : '—'}</span>
-            <span class="text-xs text-gray-500">Receive Speed</span>
+            <span class="text-2xl font-bold text-cyan-700">{summary.speedtest_best_download ?? "—"}</span>
+            <span class="text-xs text-gray-500">Best Download</span>
           </div>
         </div>
-        <div class="mt-2 text-xs text-gray-500 flex items-center gap-1"><span>Best for:</span> <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700">🌐 CDN, 🚀 Fast Network</span></div>
+        <span class="text-xs text-gray-400">iperf3 + speedtest.net</span>
       </div>
     </div>
-    <!-- Collapsible Benchmark Tables -->
+
+    <!-- Benchmark Tables -->
     <div class="mb-6">
       <details class="bg-blue-50 rounded-lg border border-blue-100">
-        <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-blue-100 rounded-t-lg flex items-center gap-2"><svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Disk Benchmark Details</summary>
+        <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-blue-100 rounded-t-lg">Disk Benchmark Details</summary>
         <div class="p-4">
-          {fioResults.length > 0 ? (
-            <FioTable results={fioResults} />
-          ) : (
-            <div class="text-gray-400 text-xs">No disk benchmark data available.</div>
-          )}
+          {fioResults.length > 0
+            ? <FioTable results={fioResults} />
+            : <div class="text-gray-400 text-xs">No disk benchmark data available.</div>}
         </div>
       </details>
       <details class="bg-cyan-50 rounded-lg border border-blue-100 mt-2">
-        <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-cyan-100 rounded-t-lg flex items-center gap-2"><svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>Network Benchmark Details</summary>
+        <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-cyan-100 rounded-t-lg">Network Benchmark Details (IPv4)</summary>
         <div class="p-4">
-          {iperf4Results.length > 0 ? (
-            <IperfTable results={iperf4Results} ipVersion="IPv4" />
-          ) : (
-            <div class="text-gray-400 text-xs">No network benchmark data available.</div>
-          )}
+          {iperf4.length > 0
+            ? <IperfTable results={iperf4} ipVersion="IPv4" />
+            : <div class="text-gray-400 text-xs">No IPv4 network data.</div>}
         </div>
       </details>
+      {iperf6.length > 0 && (
+        <details class="bg-cyan-50 rounded-lg border border-blue-100 mt-2">
+          <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-cyan-100 rounded-t-lg">Network Benchmark Details (IPv6)</summary>
+          <div class="p-4">
+            <IperfTable results={iperf6} ipVersion="IPv6" />
+          </div>
+        </details>
+      )}
+      {bench && bench.speedtest && bench.speedtest.length > 0 && (
+        <details class="bg-cyan-50 rounded-lg border border-blue-100 mt-2">
+          <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-cyan-100 rounded-t-lg">Speedtest.net Locations</summary>
+          <div class="p-4 overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead>
+                <tr class="text-gray-600">
+                  <th class="p-2">Node</th><th class="p-2">Upload</th>
+                  <th class="p-2">Download</th><th class="p-2">Latency</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bench.speedtest.map((s) => (
+                  <tr class="border-t border-gray-100">
+                    <td class="p-2 font-mono">{s.node}</td>
+                    <td class="p-2">{s.upload}</td>
+                    <td class="p-2">{s.download}</td>
+                    <td class="p-2">{s.latency}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
     </div>
-    <!-- Raw Output Section -->
-    <div class="mb-8">
-      <details class="bg-gray-100 rounded-lg">
-        <summary class="cursor-pointer text-base font-semibold p-3 text-blue-500 hover:bg-gray-100 rounded-t-lg flex items-center gap-2"><svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/></svg>Raw YABS Output <button class="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold hover:bg-blue-200 transition" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.textContent)">Copy</button></summary>
-        <pre class="bg-gray-50 p-4 rounded-b-lg overflow-x-auto text-xs text-gray-700"><code>{data.raw_yabs_output}</code></pre>
-      </details>
-    </div>
-    <div class="mb-8">
-      <details class="bg-gray-100 rounded-lg">
-        <summary class="cursor-pointer text-base font-semibold p-3 text-blue-500 hover:bg-gray-100 rounded-t-lg flex items-center gap-2"><svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/></svg>Raw bench.sh Output <button class="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold hover:bg-blue-200 transition" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.textContent)">Copy</button></summary>
-        <pre class="bg-gray-50 p-4 rounded-b-lg overflow-x-auto text-xs text-gray-700"><code>{data.raw_benchsh_output}</code></pre>
-      </details>
-    </div>
+
+    <!-- Raw Output -->
+    {rawYabs && (
+      <div class="mb-8">
+        <details class="bg-gray-100 rounded-lg">
+          <summary class="cursor-pointer text-base font-semibold p-3 text-gray-500 hover:bg-gray-100 rounded-t-lg">Raw YABS Output ({yabs?.version ?? "unknown"})</summary>
+          <pre class="bg-gray-50 p-4 rounded-b-lg overflow-x-auto text-xs text-gray-700"><code>{rawYabs}</code></pre>
+        </details>
+      </div>
+    )}
+    {rawBench && (
+      <div class="mb-8">
+        <details class="bg-gray-100 rounded-lg">
+          <summary class="cursor-pointer text-base font-semibold p-3 text-gray-500 hover:bg-gray-100 rounded-t-lg">Raw bench.sh Output ({bench?.version ?? "unknown"})</summary>
+          <pre class="bg-gray-50 p-4 rounded-b-lg overflow-x-auto text-xs text-gray-700"><code>{rawBench}</code></pre>
+        </details>
+      </div>
+    )}
   </div>
 </Layout>

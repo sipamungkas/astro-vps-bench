@@ -1,16 +1,26 @@
 ---
-import type { IperfResult } from '../utils/parsers';
+/**
+ * Tabel hasil iperf3.
+ *
+ * Kecepatan disimpan sebagai string ("412.55 Mbit/s") karena satuan berbeda
+ * antar lokasi pengukuran. Nilai 0.00 sudah diubah "busy" oleh parser,
+ * mengikuti perilaku YABS aslinya.
+ */
+import type { IperfResult } from '../types/bench';
 
 interface Props {
   results: IperfResult[];
-  ipVersion: 'IPv4' | 'IPv6';
+  ipVersion?: 'IPv4' | 'IPv6';
 }
 
-const { results, ipVersion } = Astro.props;
+const { results, ipVersion = 'IPv4' } = Astro.props;
+const show = (v: string | null | undefined) => v ?? '—';
 ---
 
 <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
-  <h3 class="text-lg font-bold mb-4 text-cyan-400">Network Speed Tests (iperf3 {ipVersion})</h3>
+  <h3 class="text-lg font-bold mb-4 text-cyan-400">
+    Network Speed Tests (iperf3 {ipVersion})
+  </h3>
   <div class="overflow-x-auto">
     <table class="w-full text-left table-auto text-sm">
       <thead>
@@ -23,16 +33,16 @@ const { results, ipVersion } = Astro.props;
         </tr>
       </thead>
       <tbody>
-        {results.map((result) => (
+        {results.map((r) => (
           <tr class="border-b border-gray-800 hover:bg-cyan-900/20 transition">
-            <td class="p-3 font-mono text-cyan-200">{result.provider}</td>
-            <td class="p-3">{result.location}</td>
-            <td class="p-3">{result.sendSpeed}</td>
-            <td class="p-3">{result.recvSpeed}</td>
-            <td class="p-3">{result.ping}</td>
+            <td class="p-3 font-mono text-cyan-200">{show(r.provider)}</td>
+            <td class="p-3">{show(r.loc)}</td>
+            <td class="p-3">{show(r.send)}</td>
+            <td class="p-3">{show(r.recv)}</td>
+            <td class="p-3">{show(r.latency)}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </div>
-</div> 
+</div>

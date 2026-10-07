@@ -2,7 +2,29 @@
 import { getCollection } from "astro:content";
 import Layout from "../layouts/Layout.astro";
 
-const allVps = await getCollection("vps");
+/**
+ * Hanya field yang memang dipakai tabel perbandingan yang ikut ke payload.
+ * Seatara ini JSON hasil benchmark ikut terbawa tapi tidak dipakai; sebelum
+ * pemangkasan, halaman ini mengirim blok `benchmarks` lengkap untuk setiap
+ * VPS. Data mentah YABS/bench.sh sudah tidak ada di JSON sama sekali.
+ */
+const slim = (await getCollection("vps")).map((v) => ({
+  slug: v.data.slug,
+  data: {
+    provider: v.data.provider,
+    title: v.data.title,
+    location: v.data.location,
+    price_monthly: v.data.price_monthly,
+    currency: v.data.currency,
+    cpu_cores: v.data.cpu_cores,
+    ram_gb: v.data.ram_gb,
+    storage_gb: v.data.storage_gb,
+    storage_type: v.data.storage_type,
+    bandwidth_tb: v.data.bandwidth_tb,
+    virtualization: v.data.virtualization,
+    summary: v.data.summary,
+  },
+}));
 ---
 <Layout title="Compare VPS">
   <div class="max-w-6xl mx-auto">
@@ -21,39 +43,53 @@ const allVps = await getCollection("vps");
       Back to Dashboard
     </a>
     <h1 class="text-3xl md:text-4xl font-extrabold mb-8">Compare VPS</h1>
-    <script type="application/json" id="all-vps-json" set:html={JSON.stringify(allVps)}></script>
+    <script type="application/json" id="all-vps-json" set:html={JSON.stringify(slim)}></script>
     <div id="compare-table"></div>
     <script is:inline>
       const allVps = JSON.parse(document.getElementById('all-vps-json').textContent);
       const params = new URLSearchParams(window.location.search);
       const ids = params.get('ids')?.split(',').filter(Boolean) ?? [];
-      const selectedVps = allVps.filter(vps => ids.includes(vps.slug));
+      const selectedVps = allVps.filter((vps) => ids.includes(vps.slug));
       const container = document.getElementById('compare-table');
-      console.log({ allVps, ids, selectedVps });
+
+      // "—" untuk nilai yang tidak terbaca, bukan 0: benchmark yang gagal
+      // (mis. Geekbench karena RAM kecil) tidak boleh terlihat seperti nol.
+      const dash = (v) => (v === null || v === undefined || v === '' ? '—' : v);
+      const nmb = (v) => (typeof v === 'number' ? v.toLocaleString('en-US') : dash(v));
+
       if (selectedVps.length < 2) {
-        container.innerHTML = `<div class="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg p-6 text-center font-semibold">Please select at least two VPS to compare.<br>DEBUG: ids=[${ids.join(', ')}], allVps.length=${allVps.length}, selectedVps.length=${selectedVps.length}</div>`;
+        container.innerHTML = `<div class="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg p-6 text-center font-semibold">Please select at least two VPS to compare.</div>`;
       } else {
         const fields = [
-          { label: 'Provider', key: 'provider', render: v => `<span class='inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold'>${v}</span>` },
-          { label: 'Plan', key: 'title' },
-          { label: 'Price', key: 'price_monthly', render: (v, vps) => `<span class='text-green-600 font-bold'>${new Intl.NumberFormat('en-US', { style: 'currency', currency: vps.data.currency }).format(v)}/mo</span>` },
-          { label: 'Location', key: 'location' },
-          { label: 'CPU', key: 'cpu_cores', render: v => `${v} cores` },
-          { label: 'Memory', key: 'ram_gb', render: v => `${v} GB` },
-          { label: 'Storage', key: 'storage_gb', render: (v, vps) => `${v} GB<br><span class='text-xs text-gray-400'>${vps.data.storage_type}</span>` },
-          { label: 'Bandwidth', key: 'bandwidth_tb', render: v => `${v} TB` },
-          { label: 'Virtualization', key: 'virtualization' },
-          { label: 'Performance', key: '', render: () => `<span class='inline-block px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold'>—</span>` },
-          { label: 'Actions', key: '', render: (_, vps) => `<a href='/vps/${vps.slug}' class='inline-block px-3 py-1 rounded-full bg-blue-500 text-white font-semibold hover:bg-blue-600 transition'>View</a>` },
+          { label: 'Provider', get: (d) => `<span class='inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold'>${dash(d.provider)}</span>` },
+          { label: 'Plan', get: (d) => dash(d.title) },
+          { label: 'Price', get: (d) => d.price_monthly === null || d.price_monthly === undefined
+              ? '—'
+              : `<span class='text-green-600 font-bold'>${new Intl.NumberFormat('en-US', { style: 'currency', currency: d.currency || 'USD' }).format(d.price_monthly)}/mo</span>` },
+          { label: 'Location', get: (d) => dash(d.location) },
+          { label: 'CPU', get: (d) => dash(d.cpu_cores) === '—' ? '—' : `${d.cpu_cores} cores` },
+          { label: 'Memory', get: (d) => dash(d.ram_gb) === '—' ? '—' : `${d.ram_gb} GB` },
+          { label: 'Storage', get: (d) => dash(d.storage_gb) === '—' ? '—' : `${d.storage_gb} GB<br><span class='text-xs text-gray-400'>${dash(d.storage_type)}</span>` },
+          { label: 'Bandwidth', get: (d) => dash(d.bandwidth_tb) === '—' ? '—' : `${d.bandwidth_tb} TB` },
+          { label: 'Virtualization', get: (d) => dash(d.virtualization) },
+          { label: 'Geekbench SC', get: (d) => `<span class='font-bold text-blue-700'>${nmb(d.summary.geekbench_single)}</span>` },
+          { label: 'Geekbench MC', get: (d) => `<span class='font-bold text-blue-700'>${nmb(d.summary.geekbench_multi)}</span>` },
+          { label: 'Max IOPS', get: (d) => `<span class='font-bold text-cyan-700'>${nmb(d.summary.max_iops)}</span>` },
+          { label: 'Max Read MB/s', get: (d) => nmb(d.summary.max_read_mb_s) },
+          { label: 'Max Write MB/s', get: (d) => nmb(d.summary.max_write_mb_s) },
+          { label: 'dd Avg MB/s', get: (d) => nmb(d.summary.dd_avg_mb_s) },
+          { label: 'Best iperf Send', get: (d) => dash(d.summary.best_iperf_send) },
+          { label: 'Best Download', get: (d) => dash(d.summary.speedtest_best_download) },
+          { label: 'Actions', get: (_, vps) => `<a href='/vps/${vps.slug}' class='inline-block px-3 py-1 rounded-full bg-blue-500 text-white font-semibold hover:bg-blue-600 transition'>View</a>` },
         ];
+
         let html = `<div class='bg-white rounded-2xl shadow-lg overflow-x-auto'><table class='min-w-full text-sm'><thead class='bg-gray-50 text-gray-500 font-semibold'><tr><th class='px-4 py-3 text-left'>Field</th>`;
-        for (const vps of selectedVps) html += `<th class='px-4 py-3 text-center'>${vps.data.title}</th>`;
+        for (const vps of selectedVps) html += `<th class='px-4 py-3 text-center'>${dash(vps.data.title)}</th>`;
         html += `</tr></thead><tbody class='divide-y divide-gray-100'>`;
         for (const field of fields) {
           html += `<tr><td class='px-4 py-3 font-semibold'>${field.label}</td>`;
           for (const vps of selectedVps) {
-            let value = field.key ? vps.data[field.key] : null;
-            html += `<td class='px-4 py-3 text-center'>${field.render ? field.render(value, vps) : value ?? ''}</td>`;
+            html += `<td class='px-4 py-3 text-center'>${field.get(vps.data, vps)}</td>`;
           }
           html += `</tr>`;
         }

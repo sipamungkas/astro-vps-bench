@@ -1,11 +1,30 @@
 ---
-import type { FioResult } from '../utils/parsers';
+/**
+ * Tabel hasil fio.
+ *
+ * Data berasal dari tools/vps-bench yang sudah menormalkan kecepatan ke
+ * KBps dan IOPS jadi angka penuh - termasuk format ringkas `(44.3k)` yang
+ * dipakai YABS versi lama. Jadi yang tampil di sini sudah bisa dibandingkan
+ * antar server tanpa konversi lagi.
+ */
+import type { FioResult } from '../types/bench';
 
 interface Props {
   results: FioResult[];
 }
 
 const { results } = Astro.props;
+
+/** KBps -> MB/s, satu desimal. Tidak mengubah null jadi 0. */
+function mb(kbps: number | null | undefined): string {
+  if (kbps === null || kbps === undefined) return '—';
+  return `${(kbps / 1024).toFixed(1)} MB/s`;
+}
+
+function num(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '—';
+  return n.toLocaleString('en-US');
+}
 ---
 
 <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
@@ -16,20 +35,26 @@ const { results } = Astro.props;
         <tr class="bg-gray-800 text-gray-300">
           <th class="p-3 font-semibold">Block Size</th>
           <th class="p-3 font-semibold">Read</th>
+          <th class="p-3 font-semibold">Read IOPS</th>
           <th class="p-3 font-semibold">Write</th>
-          <th class="p-3 font-semibold">Total</th>
+          <th class="p-3 font-semibold">Write IOPS</th>
+          <th class="p-3 font-semibold">Mixed</th>
+          <th class="p-3 font-semibold">Mixed IOPS</th>
         </tr>
       </thead>
       <tbody>
-        {results.map((result) => (
+        {results.map((r) => (
           <tr class="border-b border-gray-800 hover:bg-cyan-900/20 transition">
-            <td class="p-3 font-mono text-cyan-200">{result.blockSize}</td>
-            <td class="p-3">{result.read}</td>
-            <td class="p-3">{result.write}</td>
-            <td class="p-3">{result.total}</td>
+            <td class="p-3 font-mono text-cyan-200">{r.bs ?? '—'}</td>
+            <td class="p-3">{mb(r.speed_r)}</td>
+            <td class="p-3">{num(r.iops_r)}</td>
+            <td class="p-3">{mb(r.speed_w)}</td>
+            <td class="p-3">{num(r.iops_w)}</td>
+            <td class="p-3">{mb(r.speed_rw)}</td>
+            <td class="p-3">{num(r.iops_rw)}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </div>
-</div> 
+</div>

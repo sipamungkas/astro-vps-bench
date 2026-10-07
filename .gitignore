@@ -22,3 +22,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# hasil benchmark mentah (JSON + Markdown + raw).
+# Salinan yang sudah jadi input situs tetap di-commit lewat src/data/.
+bench-results/

@@ -1,94 +1,94 @@
 ---
 import { getCollection } from "astro:content";
 import Layout from "../layouts/Layout.astro";
-import AffiliateButton from "../components/AffiliateButton.astro";
 
 const allVps = await getCollection("vps");
+
+/**
+ * Kategori filter.
+ * Provider dipisah jadi nama pendek + badan usaha oleh tools/vps-bench, jadi
+ * filter memakai `provider` (mis. "Nevacloud"), bukan "Nevacloud (PT Deneva)".
+ * Lokasi dipisah berdasarkan negara supaya filter tidak terlalu rapuh.
+ */
+const providers = [...new Set(allVps.map((v) => v.data.provider))]
+  .filter(Boolean)
+  .sort((a, b) => a.localeCompare(b));
+
+const countries = [...new Set(
+  allVps
+    .map((v) => (v.data.location ?? "").split(",").pop()?.trim() ?? "")
+    .filter(Boolean),
+)].sort((a, b) => a.localeCompare(b));
+
+const nmb = (n: number | null | undefined) =>
+  n === null || n === undefined ? "—" : n.toLocaleString("en-US");
+
+/** Kartu ringkas per VPS, hanya field yang dipakai filter/tabel. */
+const rows = allVps.map((v) => ({
+  slug: v.data.slug,
+  provider: v.data.provider,
+  title: v.data.title,
+  location: v.data.location ?? "",
+  country: (v.data.location ?? "").split(",").pop()?.trim() ?? "",
+  price: v.data.price_monthly ?? null,
+  currency: v.data.currency,
+  cpu: v.data.cpu_cores ?? null,
+  ram: v.data.ram_gb ?? null,
+  storage: v.data.storage_gb ?? null,
+  storage_type: v.data.storage_type ?? "",
+  affiliate: v.data.affiliate_link ?? "",
+  summary: v.data.summary,
+}));
 ---
 
 <Layout title="VPS Benchmark by Sipamungkas.com">
   <section class="mb-8">
-    <h1 class="text-4xl md:text-5xl font-extrabold mb-2">
-      VPS Benchmark Dashboard
-    </h1>
-    <p class="text-lg text-gray-500 mb-6">
-      Compare VPS performance across providers
-    </p>
-    <div class="mb-6">
-      <!-- Placeholder for SearchFilter -->
-      <div
-        class="flex items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-2 max-w-xl"
-      >
-        <svg
-          class="w-5 h-5 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          ><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35"
-          ></path></svg
-        >
+    <h1 class="text-4xl md:text-5xl font-extrabold mb-2">VPS Benchmark Dashboard</h1>
+    <p class="text-lg text-gray-500 mb-6">Compare VPS performance across providers</p>
+
+    <!-- Filter -->
+    <div class="mb-6 flex flex-col md:flex-row gap-3">
+      <div class="flex items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-2 md:flex-1">
+        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35"></path>
+        </svg>
         <input
+          id="q"
           type="text"
-          placeholder="Search providers, locations..."
-          class="flex-1 bg-transparent outline-none text-base text-gray-700"
+          placeholder="Search provider, plan, location..."
+          class="flex-1 bg-transparent outline-none text-base text-gray-700 w-full"
         />
-        <select
-          class="bg-gray-100 border border-gray-200 rounded px-2 py-1 text-sm text-gray-700"
-        >
-          <option>All Providers</option>
-        </select>
-        <button
-          class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100"
-          ><svg
-            class="w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            ><rect x="4" y="4" width="16" height="16" rx="2"></rect><path
-              d="M9 9h6v6H9z"></path></svg
-          ></button
-        >
-        <button
-          class="w-8 h-8 flex items-center justify-center rounded border-2 border-blue-500 bg-blue-50"
-          ><svg
-            class="w-5 h-5 text-blue-500"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg
-          ></button
-        >
       </div>
+      <select id="f-provider" class="bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-2 text-sm text-gray-700">
+        <option value="">All Providers</option>
+        {providers.map((p) => (<option value={p}>{p}</option>))}
+      </select>
+      <select id="f-country" class="bg-white border border-gray-200 rounded-xl shadow-sm px-4 py-2 text-sm text-gray-700">
+        <option value="">All Locations</option>
+        {countries.map((c) => (<option value={c}>{c}</option>))}
+      </select>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      <!-- Placeholder StatCards -->
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
       <div class="bg-white rounded-xl shadow p-5 flex flex-col items-center">
-        <span class="text-blue-500 text-2xl font-bold mb-1"
-          >{allVps.length}</span
-        >
+        <span class="text-blue-500 text-2xl font-bold mb-1">{allVps.length}</span>
         <span class="text-xs text-gray-500">VPS Benchmarks</span>
       </div>
       <div class="bg-white rounded-xl shadow p-5 flex flex-col items-center">
-        <span id="selected-count" class="text-green-500 text-2xl font-bold mb-1"
-          >0</span
-        >
+        <span id="selected-count" class="text-green-500 text-2xl font-bold mb-1">0</span>
         <span class="text-xs text-gray-500">Selected</span>
       </div>
       <div class="bg-white rounded-xl shadow p-5 flex flex-col items-center">
-        <span class="text-blue-500 text-2xl font-bold mb-1"
-          >{[...new Set(allVps.map((v) => v.data.provider))].length}</span
-        >
+        <span id="provider-count" class="text-blue-500 text-2xl font-bold mb-1">{providers.length}</span>
         <span class="text-xs text-gray-500">Providers</span>
       </div>
       <div class="bg-white rounded-xl shadow p-5 flex flex-col items-center">
-        <span class="text-blue-500 text-2xl font-bold mb-1"
-          >{[...new Set(allVps.map((v) => v.data.location))].length}</span
-        >
-        <span class="text-xs text-gray-500">Countries</span>
+        <span id="country-count" class="text-blue-500 text-2xl font-bold mb-1">{countries.length}</span>
+        <span class="text-xs text-gray-500">Locations</span>
       </div>
     </div>
+
     <div class="flex justify-end mb-2">
       <button
         id="compare-btn"
@@ -96,6 +96,8 @@ const allVps = await getCollection("vps");
         disabled>Compare</button
       >
     </div>
+
+    <!-- Table -->
     <div class="bg-white rounded-2xl shadow-lg overflow-x-auto">
       <table class="min-w-full text-sm">
         <thead class="bg-gray-50 text-gray-500 font-semibold">
@@ -108,111 +110,128 @@ const allVps = await getCollection("vps");
             <th class="px-4 py-3 text-left">CPU</th>
             <th class="px-4 py-3 text-left">Memory</th>
             <th class="px-4 py-3 text-left">Storage</th>
-            <th class="px-4 py-3 text-left">Network Speed</th>
-            <th class="px-4 py-3 text-left">Performance</th>
+            <th class="px-4 py-3 text-left">Geekbench SC</th>
+            <th class="px-4 py-3 text-left">Max IOPS</th>
+            <th class="px-4 py-3 text-left">Network</th>
             <th class="px-4 py-3 text-left">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
-          {
-            allVps.map((vps, i) => (
-              <tr>
-                <td class="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    class="accent-blue-500 vps-checkbox"
-                    data-slug={vps.slug}
-                  />
-                </td>
-                <td class="px-4 py-3">
-                  <span class="inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
-                    {vps.data.provider}
-                  </span>
-                </td>
-                <td class="px-4 py-3">{vps.data.title}</td>
-                <td class="px-4 py-3 text-green-600 font-bold">
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: vps.data.currency,
-                  }).format(vps.data.price_monthly)}
-                  /mo
-                </td>
-                <td class="px-4 py-3">{vps.data.location}</td>
-                <td class="px-4 py-3">{vps.data.cpu_cores} cores</td>
-                <td class="px-4 py-3">{vps.data.ram_gb} GB</td>
-                <td class="px-4 py-3">{vps.data.storage_gb} GB</td>
-                <td class="px-4 py-3">—</td>
-                <td class="px-4 py-3">
-                  <span class="inline-block px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                    —
-                  </span>
-                </td>
-                <td class="px-4 py-3 flex gap-2">
-                  <a
-                    href={`/vps/${vps.slug}`}
-                    class="w-8 h-8 flex items-center justify-center rounded hover:bg-blue-100"
-                    title="View Details"
-                  >
-                    <svg
-                      class="w-5 h-5 text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <>
-                        <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </>
-                    </svg>
-                  </a>
-                  <a
-                    href={vps.data.affiliate_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold text-sm shadow hover:scale-105 hover:brightness-110 transition-all duration-200"
-                    title="Buy VPS (Affiliate)"
-                  >
-                    <svg
-                      class="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <>
-                        <path d="M2 7h20M2 12h20M2 17h20" />
-                        <rect x="2" y="5" width="20" height="14" rx="2" />
-                        <path d="M7 15h.01" />
-                      </>
-                    </svg>
+        <tbody id="vps-body" class="divide-y divide-gray-100">
+          {rows.map((r) => (
+            <tr
+              data-slug={r.slug}
+              data-provider={r.provider}
+              data-country={r.country}
+              data-search={`${r.provider} ${r.title} ${r.location} ${r.storage_type}`.toLowerCase()}
+            >
+              <td class="px-4 py-3">
+                <input type="checkbox" class="accent-blue-500 vps-checkbox" data-slug={r.slug} />
+              </td>
+              <td class="px-4 py-3">
+                <span class="inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">{r.provider}</span>
+              </td>
+              <td class="px-4 py-3">{r.title}</td>
+              <td class="px-4 py-3 text-green-600 font-bold">
+                {r.price === null
+                  ? "—"
+                  : `${new Intl.NumberFormat("en-US", { style: "currency", currency: r.currency ?? "USD" }).format(r.price)}`}
+                <span class="text-gray-400 font-normal">/mo</span>
+              </td>
+              <td class="px-4 py-3">{r.location}</td>
+              <td class="px-4 py-3">{r.cpu ?? "—"} cores</td>
+              <td class="px-4 py-3">{r.ram ?? "—"} GB</td>
+              <td class="px-4 py-3">{r.storage ?? "—"} GB {r.storage_type}</td>
+              <td class="px-4 py-3 font-semibold text-blue-700">{nmb(r.summary.geekbench_single)}</td>
+              <td class="px-4 py-3 font-semibold text-cyan-700">{nmb(r.summary.max_iops)}</td>
+              <td class="px-4 py-3">{r.summary.best_iperf_send ?? "—"}</td>
+              <td class="px-4 py-3 flex gap-2">
+                <a href={`/vps/${r.slug}`} class="w-8 h-8 flex items-center justify-center rounded hover:bg-blue-100" title="View Details">
+                  <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </a>
+                {r.affiliate && (
+                  <a href={r.affiliate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold text-sm shadow hover:scale-105 transition" title="Buy VPS (Affiliate)">
                     Buy
                   </a>
-                </td>
-              </tr>
-            ))
-          }
+                )}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
+
+    <p id="empty-msg" class="hidden text-center text-gray-400 py-10 text-sm">
+      No VPS matches the current filter.
+    </p>
+
     <script is:inline>
-      const checkboxes = Array.from(document.querySelectorAll(".vps-checkbox"));
+      const q = document.getElementById("q");
+      const fProvider = document.getElementById("f-provider");
+      const fCountry = document.getElementById("f-country");
+      const rows = Array.from(document.querySelectorAll("#vps-body tr"));
+      const emptyMsg = document.getElementById("empty-msg");
+      const providerCount = document.getElementById("provider-count");
+      const countryCount = document.getElementById("country-count");
+
       const compareBtn = document.getElementById("compare-btn");
       const selectedCount = document.getElementById("selected-count");
+
+      function applyFilters() {
+        const term = q.value.trim().toLowerCase();
+        const prov = fProvider.value;
+        const ctry = fCountry.value;
+        let visible = 0;
+        const providersSeen = new Set();
+        const countriesSeen = new Set();
+
+        rows.forEach((row) => {
+          const okTerm = !term || row.dataset.search.includes(term);
+          const okProv = !prov || row.dataset.provider === prov;
+          const okCtry = !ctry || row.dataset.country === ctry;
+          const show = okTerm && okProv && okCtry;
+          row.style.display = show ? "" : "none";
+          if (show) {
+            visible++;
+            providersSeen.add(row.dataset.provider);
+            countriesSeen.add(row.dataset.country);
+          }
+        });
+
+        emptyMsg.classList.toggle("hidden", visible !== 0);
+        providerCount.textContent = providersSeen.size;
+        countryCount.textContent = countriesSeen.size;
+      }
+
+      [q, fProvider, fCountry].forEach((el) => {
+        el.addEventListener("input", applyFilters);
+        el.addEventListener("change", applyFilters);
+      });
+
       function updateCompareState() {
-        const selected = checkboxes.filter((cb) => cb.checked);
+        const boxes = Array.from(document.querySelectorAll(".vps-checkbox")).filter(
+          (cb) => cb.closest("tr").style.display !== "none"
+        );
+        const selected = boxes.filter((cb) => cb.checked);
         selectedCount.textContent = selected.length;
         compareBtn.disabled = selected.length < 2;
-        compareBtn.onclick = () => {
-          if (selected.length >= 2) {
-            const slugs = selected.map((cb) => cb.dataset.slug).join(",");
-            window.location.href = `/compare?ids=${slugs}`;
-          }
-        };
       }
-      checkboxes.forEach((cb) =>
+
+      document.querySelectorAll(".vps-checkbox").forEach((cb) =>
         cb.addEventListener("change", updateCompareState)
       );
+
+      compareBtn.addEventListener("click", () => {
+        const slugs = Array.from(document.querySelectorAll(".vps-checkbox"))
+          .filter((cb) => cb.checked)
+          .map((cb) => cb.dataset.slug);
+        if (slugs.length >= 2) window.location.href = `/compare?ids=${slugs.join(",")}`;
+      });
+
+      applyFilters();
+      updateCompareState();
     </script>
   </section>
 </Layout>
