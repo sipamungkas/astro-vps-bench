@@ -110,7 +110,7 @@ dan mencetak JSON siap-salin. Tidak butuh checkout repo, cuma `bash`, `jq`,
 `curl`, dan `ssh`.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sipamungkas/astro-vps-bench/main/tools/vps-bench-standalone \
+curl -fsSL https://raw.githubusercontent.com/sipamungkas/vps-bench-script/main/tools/vps-bench-standalone \
   | bash -s -- vps-saya \
       --slug nevacloud-nvme-jkt \
       --title "Nevacloud NVMe Jakarta" \
@@ -151,7 +151,8 @@ kalau hasil YABS-nya sudah ada di komputer lokal:
 ```
 
 Parser **tidak** ditulis ulang di skrip standalone. Berkas itu mengunduh
-`tools/lib/bench_parse.sh` dan `tools/lib/astro_data.sh` dari repo lalu
+`tools/lib/bench_parse.sh` dan `tools/lib/astro_data.sh` dari
+[vps-bench-script](https://github.com/sipamungkas/vps-bench-script) lalu
 mem-`-source`-nya, jadi hanya ada satu implementasi parser. Parser lokal
 dipakai kalau `VBENCH_LIB_DIR` diisi, berguna untuk mode offline:
 
@@ -159,8 +160,9 @@ dipakai kalau `VBENCH_LIB_DIR` diisi, berguna untuk mode offline:
 VBENCH_LIB_DIR=tools/lib ./tools/vps-bench-standalone ...
 ```
 
-Butuh `tools/lib/*.sh` sudah ada di branch yang dipilih. Ganti targetnya
-dengan env `VBENCH_REPO` dan `VBENCH_REF`.
+Ganti targetnya dengan env `VBENCH_REPO` dan `VBENCH_REF`. Folder `tools/` dan
+`tests/` di dua repo itu isinya identik; `tests/run_tests.sh` di
+vps-bench-script bisa dijalankan tanpa repo situs.
 
 ### Perintah lain
 
