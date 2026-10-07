@@ -1,0 +1,57 @@
+---
+/**
+ * Site header.
+ *
+ * `active` drives the current-page indicator. The indicator is a bottom border
+ * rather than a background fill or a dot, so switching pages never shifts the
+ * surrounding text.
+ */
+interface Props {
+  active?: 'dashboard' | 'compare' | null;
+}
+
+const { active = null } = Astro.props;
+
+const links = [
+  { key: 'dashboard', label: 'Dashboard', href: '/' },
+  { key: 'compare', label: 'Compare', href: '/compare' },
+] as const;
+---
+
+<header class="border-b border-line bg-surface">
+  <div class="shell flex h-16 items-center justify-between">
+    <a href="/" class="flex items-center gap-2.5">
+      <span
+        class="flex h-6 w-6 items-center justify-center bg-ink"
+        aria-hidden="true"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      </span>
+      <span class="flex items-end gap-2">
+        <span class="font-display text-[18px] font-bold tracking-tight text-ink">vpsbench</span>
+        <span class="pb-px text-[12px] font-medium text-ink-tertiary">VPS benchmark data</span>
+      </span>
+    </a>
+
+    <nav class="flex items-center gap-1" aria-label="Main">
+      {
+        links.map((l) => (
+          <a
+            href={l.href}
+            aria-current={active === l.key ? 'page' : undefined}
+            class:list={[
+              'flex h-9 items-center border-b-2 px-3 text-[13px] transition-colors',
+              active === l.key
+                ? 'border-ink font-semibold text-ink'
+                : 'border-transparent font-medium text-ink-secondary hover:text-ink',
+            ]}
+          >
+            {l.label}
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+</header>

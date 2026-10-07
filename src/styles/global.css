@@ -1,1 +1,211 @@
 @import "tailwindcss";
+
+/*
+ * Design tokens.
+ *
+ * Values mirror the pen.dev "Product Data Grid / Minimal Ink" archetype:
+ * pure white ground, ink text, a single blue reserved for actions and
+ * selection, and square corners everywhere (the archetype's rounded.none).
+ *
+ * Archivo carries display, Inter carries UI copy, Geist Mono carries every
+ * measured number so digits line up column to column.
+ */
+@theme {
+  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "Geist Mono", ui-monospace, "SF Mono", monospace;
+
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f7f8;
+  --color-surface-sunken: #f1f1f3;
+  --color-surface-inverse: #141416;
+
+  --color-ink: #1a1a1a;
+  --color-ink-secondary: #5c5c66;
+  --color-ink-tertiary: #92929c;
+  --color-ink-inverse: #ffffff;
+
+  --color-line: #e3e3e7;
+  --color-accent: #0066ff;
+  --color-accent-wash: #edf4ff;
+  --color-positive: #0a7d4b;
+  --color-positive-wash: #e9f6ef;
+  --color-missing: #a0a0aa;
+}
+
+/* The archetype is explicitly square-cornered. */
+*,
+*::before,
+*::after {
+  border-radius: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Native select keeps its own arrow in most engines; hide it so the custom
+   chevron is the only affordance. */
+select {
+  appearance: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shared primitives
+ * ------------------------------------------------------------------ */
+
+.shell {
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: 32px;
+}
+
+@media (max-width: 768px) {
+  .shell {
+    padding-inline: 20px;
+  }
+}
+
+.eyebrow {
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink-tertiary);
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--color-ink-tertiary);
+}
+
+.section-note {
+  font-size: 12px;
+  color: var(--color-ink-tertiary);
+}
+
+.hairline {
+  height: 1px;
+  background: var(--color-line);
+}
+
+.mono {
+  font-family: var(--font-data);
+}
+
+/* ------------------------------------------------------------------ *
+ * Magnitude bar
+ *
+ * The comparison device of this site: a thin ink fill on a neutral
+ * track, scaled to the largest value in the current row or list. It is
+ * deliberately monochrome so the accent stays reserved for actions.
+ * ------------------------------------------------------------------ */
+
+.bar {
+  width: 100%;
+  max-width: 140px;
+  height: 3px;
+  background: #dedede;
+  overflow: hidden;
+}
+
+.bar > i {
+  display: block;
+  height: 100%;
+  background: var(--color-ink);
+}
+
+/* ------------------------------------------------------------------ *
+ * Data table
+ *
+ * Table -> row -> cell -> content. Cells are fixed height so numeric
+ * columns can right-align and still sit on the row's baseline.
+ * ------------------------------------------------------------------ */
+
+.dtable {
+  width: 100%;
+}
+
+.dtable thead th {
+  height: 40px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-ink-tertiary);
+  text-align: left;
+  padding: 0 16px;
+  white-space: nowrap;
+}
+
+.dtable tbody td {
+  height: 44px;
+  padding: 0 16px;
+  border-top: 1px solid var(--color-line);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/*
+ * Roomy rows: the dashboard table, where each row carries a three-line plan
+ * cell and a stacked Buy/Details action. Those need roughly double the
+ * breathing room of a plain measurement row, so the height comes from padding
+ * and the row grows to fit its tallest cell instead of being pinned.
+ */
+.dtable--roomy tbody td {
+  height: auto;
+  padding-top: 22px;
+  padding-bottom: 22px;
+}
+
+.dtable tbody tr:hover td {
+  background: var(--color-surface-subtle);
+}
+
+.dtable .num {
+  text-align: right;
+  font-family: var(--font-data);
+  font-size: 13px;
+  color: var(--color-ink-secondary);
+}
+
+.dtable .num-strong {
+  text-align: right;
+  font-family: var(--font-data);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.dtable .key {
+  font-family: var(--font-data);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* Best-in-row marker on the compare page. */
+.best-tag {
+  font-family: var(--font-data);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  margin-left: 8px;
+}
+
+.missing {
+  color: var(--color-missing);
+}

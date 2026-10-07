@@ -1,24 +1,25 @@
 ---
-import { getCollection, type CollectionEntry } from "astro:content";
-import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import Layout from "../../layouts/Layout.astro";
-import FioTable from "../../components/FioTable.astro";
-import IperfTable from "../../components/IperfTable.astro";
-import AffiliateButton from "../../components/AffiliateButton.astro";
+import { getCollection, type CollectionEntry } from 'astro:content';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import Layout from '../../layouts/Layout.astro';
+import FioTable from '../../components/FioTable.astro';
+import IperfTable from '../../components/IperfTable.astro';
+import AffiliateButton from '../../components/AffiliateButton.astro';
+import { money } from '../../lib/format';
 
 export async function getStaticPaths() {
-  const vpsEntries = await getCollection("vps");
+  const vpsEntries = await getCollection('vps');
   return vpsEntries.map((entry) => ({
-    // `slug` diambil dari data, bukan dari entry: glob loader tidak
-    // menyediakan properti `slug`, tapi field `slug` ada di tiap JSON.
+    // `slug` comes from the data, not the entry: the glob loader does not
+    // expose a `slug` property, but every JSON has a `slug` field.
     params: { slug: entry.data.slug },
     props: { entry },
   }));
 }
 
 interface Props {
-  entry: CollectionEntry<"vps">;
+  entry: CollectionEntry<'vps'>;
 }
 
 const { entry } = Astro.props;
@@ -28,21 +29,21 @@ const yabs = data.benchmarks.yabs;
 const bench = data.benchmarks.benchsh;
 
 /**
- * Output mentah dibaca dari disk saat build, bukan disimpan di JSON.
- * Sumber: src/data/raw/<slug>/*.txt
+ * Raw output is read from disk at build time rather than stored in the JSON:
+ * src/data/raw/<slug>/*.txt
  *
- * Path dihitung dari process.cwd() (root proyek saat `astro build`), bukan
- * dari import.meta.url - di bundle build, import.meta.url menunjuk lokasi
- * artefak Vite, bukan file sumber.
+ * The path is built from process.cwd() (the project root during `astro build`),
+ * not import.meta.url - in a build bundle import.meta.url points at Vite's
+ * artefact location, not the source file.
  */
-const RAW_DIR = join(process.cwd(), "src", "data", "raw");
+const RAW_DIR = join(process.cwd(), 'src', 'data', 'raw');
 
 function readRaw(name: string | null | undefined): string | null {
   if (!name) return null;
   const p = join(RAW_DIR, data.slug, name);
   if (!existsSync(p)) return null;
   try {
-    return readFileSync(p, "utf8");
+    return readFileSync(p, 'utf8');
   } catch {
     return null;
   }
@@ -52,222 +53,395 @@ const rawYabs = readRaw(yabs?.raw_file);
 const rawBench = readRaw(bench?.raw_file);
 
 const fioResults = (yabs?.fio ?? []).filter((f) => f.bs);
-const iperf4 = (yabs?.iperf ?? []).filter((r) => (r.mode ?? "IPv4") === "IPv4");
-const iperf6 = (yabs?.iperf ?? []).filter((r) => r.mode === "IPv6");
+const iperf4 = (yabs?.iperf ?? []).filter((r) => (r.mode ?? 'IPv4') === 'IPv4');
+const iperf6 = (yabs?.iperf ?? []).filter((r) => r.mode === 'IPv6');
+const speedtest = bench?.speedtest ?? [];
 
-function fmtMoney(n: number | null | undefined, cur: string | null | undefined) {
-  if (n === null || n === undefined || !cur) return "—";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: cur }).format(n);
-}
+const fmtMoney = money;
 
-function daysAgo(dateStr: string | null | undefined) {
-  if (!dateStr) return "unknown";
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  const diff = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-  return diff <= 0 ? "today" : `${diff} day${diff > 1 ? "s" : ""} ago`;
+function benchmarkedOn(dateStr: string | null | undefined) {
+  if (!dateStr) return 'unknown';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 const nmb = (n: number | null | undefined) =>
-  n === null || n === undefined ? "—" : n.toLocaleString("en-US");
-const mbs = (n: number | null | undefined) =>
-  n === null || n === undefined ? "—" : `${n.toLocaleString("en-US")} MB/s`;
+  n === null || n === undefined ? '—' : n.toLocaleString('en-US');
+
+const cpuModel = yabs?.cpu?.model ?? bench?.cpu?.model ?? '';
+const cpuMhz = bench?.cpu?.freq_mhz ?? null;
+
+/** iperf send normalised to Mbit/s purely so the bar can be scaled. */
+function toMbps(s: string | null | undefined): number | null {
+  if (!s || s === 'busy') return null;
+  const m = String(s).match(/^([\d.]+)\s*([KMG])/i);
+  if (!m) return null;
+  const mult = { k: 1e-3, m: 1, g: 1e3 }[m[2]!.toLowerCase()]!;
+  return parseFloat(m[1]!) * mult;
+}
+
+const iperfMbps = toMbps(summary.best_iperf_send);
+const avgRun = bench?.io_mb_s?.average ?? null;
+
+/**
+ * Scoreboard.
+ *
+ * Each metric carries its own unit in the sub-line so a bare number is never
+ * ambiguous, and a dash is always explained by "not run" rather than looking
+ * like zero.
+ *
+ * Deliberately no magnitude bar here. A bar needs a reference, and on a single
+ * plan page the neighbouring numbers are different measurements - fio read
+ * throughput and the bench.sh sequential average are not comparable, so a bar
+ * between them would imply a relationship that does not exist. Bars belong on
+ * the dashboard and compare pages, where the reference is another plan.
+ */
+type Metric = { label: string; value: string | null; sub: string };
+
+const maxRead = summary.max_read_mb_s ?? null;
+
+const scoreboard: Metric[] = [
+  {
+    label: 'Geekbench 6 single',
+    value: summary.geekbench_single === null ? null : nmb(summary.geekbench_single),
+    sub: summary.geekbench_single === null ? 'not run · not enough RAM' : 'single-core score',
+  },
+  {
+    label: 'Max IOPS',
+    value: nmb(summary.max_iops),
+    sub: 'fio 4k mixed read+write',
+  },
+  {
+    label: 'Sequential read',
+    value: maxRead === null ? null : nmb(maxRead),
+    sub: 'MB/s · fio max read',
+  },
+  {
+    label: 'Best iperf3 send',
+    value: iperfMbps === null ? null : nmb(Math.round(iperfMbps)),
+    sub: 'Mbit/sec · best IPv4 node',
+  },
+];
+
+const specPairs: [string, string | null][] = [
+  ['Operating system', yabs?.os?.distro ?? bench?.system?.os ?? null],
+  ['Kernel', yabs?.os?.kernel ?? bench?.system?.kernel ?? null],
+  ['Virtualization', yabs?.vm ?? bench?.system?.virtualization ?? data.virtualization ?? null],
+  ['TCP congestion', bench?.system?.tcp_congestion ?? null],
+  ['CPU model', cpuModel || null],
+  ['CPU frequency', cpuMhz ? `${cpuMhz.toLocaleString('en-US')} MHz` : (yabs?.cpu?.freq ?? null)],
+  ['vCPU allocated', data.cpu_cores === null ? null : String(data.cpu_cores)],
+  ['AES-NI', yabs?.cpu?.aes === true || bench?.cpu?.aes === true ? 'Supported' : null],
+  ['RAM as reported', yabs?.mem?.ram ?? bench?.mem?.ram ?? null],
+  ['Swap', yabs?.mem?.swap ?? bench?.mem?.swap ?? null],
+  ['Disk as reported', yabs?.mem?.disk ?? bench?.mem?.disk ?? null],
+  ['Uptime at test', yabs?.uptime ?? bench?.system?.uptime ?? null],
+  ['Network', bench?.net?.organization ?? yabs?.ip_info?.asn ?? null],
+  [
+    'Geo from test',
+    ([bench?.net?.location, bench?.net?.region].filter(Boolean).join(', ') ||
+      yabs?.ip_info?.location) ?? null,
+  ],
+  ['IPv4', bench?.net?.ipv4 === true ? 'Reachable' : yabs?.net?.ipv4 === true ? 'Reachable' : null],
+  ['IPv6', bench?.net?.ipv6 === true ? 'Reachable' : yabs?.net?.ipv6 === true ? 'Reachable' : null],
+];
+
+/** Spec pairs with a value, laid out two per row. */
+const cleanPairs: [string, string][] = specPairs
+  .filter((p): p is [string, string] => Boolean(p[1]))
+  .map(([k, v]) => [k, v]);
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+const specRows = chunk(cleanPairs, 2);
 ---
 
-<Layout title={data.title}>
-  <div class="max-w-5xl mx-auto px-2 md:px-0">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-6 gap-2">
-      <div class="flex items-center gap-4">
-        <span class="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold text-lg shadow">
-          {data.provider}
-        </span>
-        <div class="flex flex-col">
-          <h1 class="text-2xl font-extrabold text-gray-900 leading-tight">{data.title}</h1>
-          <span class="text-sm text-gray-400 flex items-center gap-1">{data.location ?? "—"}</span>
-        </div>
-      </div>
-      <a href={`/compare?ids=${data.slug}`} class="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-2 rounded-lg font-semibold flex items-center gap-2 shadow hover:scale-105 hover:brightness-110 transition text-sm mt-4 md:mt-0 self-start">
-        Add to Comparison
-      </a>
-    </div>
+<Layout title={`${data.title} benchmark`} description={`${data.provider} ${data.title} benchmarked with YABS.sh and bench.sh in ${data.location ?? 'an unknown location'}.`}>
+  <!-- Identity -->
+  <section class="shell pt-10">
+    <nav class="flex items-center gap-2 text-[12px]" aria-label="Breadcrumb">
+      <a href="/" class="font-medium text-accent hover:underline">Dashboard</a>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ink-tertiary">
+        <path d="M9 18l6-6-6-6" />
+      </svg>
+      <span class="text-ink-tertiary">{data.title}</span>
+    </nav>
 
-    <!-- Hero Card -->
-    <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl shadow-lg p-6 mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-      <div class="flex flex-col gap-2">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-3xl font-extrabold text-blue-700">{fmtMoney(data.price_monthly, data.currency)}</span>
-          <span class="text-base text-gray-400">/month</span>
-          <span class="ml-2 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">{data.status ?? "Unknown"}</span>
-        </div>
-        <div class="flex flex-wrap gap-2 mt-2">
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{data.cpu_cores ?? "—"} CPU</span>
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-cyan-100 text-cyan-700 text-xs font-semibold">{data.ram_gb ?? "—"} GB RAM</span>
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">{data.storage_gb ?? "—"} GB {data.storage_type ?? ""}</span>
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 text-xs font-semibold">{data.bandwidth_tb ?? "—"} TB BW</span>
-          {data.virtualization && (
-            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">{data.virtualization}</span>
-          )}
-        </div>
+    <div class="mt-4 flex flex-wrap items-end justify-between gap-8 pb-6">
+      <div>
         {data.provider_legal && (
-          <p class="text-xs text-gray-400 mt-1">Legal entity: {data.provider_legal}</p>
+          <p class="mono text-[10px] font-semibold tracking-[0.1em] text-accent">
+            {data.provider.toUpperCase()} &middot; {data.provider_legal.toUpperCase()}
+          </p>
         )}
-        {data.affiliate_link && (
-          <div class="flex items-center gap-2 mt-4">
-            <AffiliateButton link={data.affiliate_link} providerName="Purchase VPS" />
+        <h1 class="mt-2.5 font-display text-[36px] leading-[1.08] font-bold tracking-tight text-ink">
+          {data.title}
+        </h1>
+
+        <ul class="mt-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[12px] text-ink-secondary">
+          <li class="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ink-tertiary">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0" /><circle cx="12" cy="10" r="3" />
+            </svg>
+            {data.location ?? '—'}
+          </li>
+          <li class="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ink-tertiary">
+              <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" />
+            </svg>
+            {data.cpu_cores ?? '—'} vCPU{cpuModel ? ` · ${cpuModel}` : ''}
+          </li>
+          <li class="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ink-tertiary">
+              <path d="M2 20h20" /><path d="M4 20V9l8-5 8 5v11" />
+            </svg>
+            {data.ram_gb ?? '—'} GB RAM &middot; {data.storage_gb ?? '—'} GB {data.storage_type ?? ''}
+          </li>
+          <li class="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ink-tertiary">
+              <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+            Benchmarked {benchmarkedOn(data.last_updated)}
+          </li>
+        </ul>
+      </div>
+
+      <div class="flex flex-col items-end gap-3">
+        <div class="flex items-end gap-2">
+          <span class="mono text-[28px] font-semibold tracking-tight text-ink">
+            {fmtMoney(data.price_monthly, data.currency)}
+          </span>
+          <span class="pb-1 text-[12px] text-ink-tertiary">per month</span>
+        </div>
+
+        {data.status && (
+          <span class="inline-flex h-6 items-center gap-1.5 bg-positive-wash px-2.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-positive"></span>
+            <span class="mono text-[10px] font-semibold tracking-wide text-positive uppercase">
+              {data.status}
+            </span>
+          </span>
+        )}
+
+        <div class="flex flex-wrap items-center justify-end gap-2.5">
+          <a
+            href={`/compare?ids=${data.slug}`}
+            class="flex h-[42px] items-center gap-2 border border-ink px-[15px] text-[13px] font-medium text-ink transition-colors hover:bg-surface-subtle"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3v18M3 12h18" />
+            </svg>
+            Add to compare
+          </a>
+          {data.affiliate_link && <AffiliateButton link={data.affiliate_link} providerName={data.provider} />}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scoreboard -->
+  <section class="border-y border-line bg-surface-subtle">
+    <div class="shell flex flex-wrap">
+      {
+        scoreboard.map((m, i) => (
+          <div
+            class:list={[
+              'min-w-[200px] flex-1 py-6',
+              i > 0 && 'border-line md:border-l md:pl-6',
+              i === 0 && 'md:pr-6',
+            ]}
+          >
+            <p class="section-label">{m.label}</p>
+            <p
+              class:list={[
+                'mono mt-2 text-[26px] font-semibold tracking-tight',
+                m.value === null ? 'text-missing' : 'text-ink',
+              ]}
+            >
+              {m.value ?? '—'}
+            </p>
+            <p class="text-[11px] leading-[1.4] text-ink-tertiary">{m.sub}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- System information -->
+  <section class="shell pt-9">
+    <div class="flex items-center gap-3.5 pb-2.5">
+      <span class="section-label">System information</span>
+      <span class="hairline flex-1"></span>
+    </div>
+    <dl>
+      {
+        specRows.map((row) => (
+          <div class="flex flex-wrap border-b border-line">
+            {row.map(([k, v]) => (
+              <div class="flex w-full items-center md:w-1/2">
+                <dt class="w-[186px] shrink-0 py-2.5 text-[13px] text-ink-tertiary">{k}</dt>
+                <dd class="mono py-2.5 text-[13px] text-ink">{v}</dd>
+              </div>
+            ))}
+            {row.length === 1 && <div class="hidden w-1/2 md:block" />}
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <!-- Disk -->
+  {
+    fioResults.length > 0 && (
+      <section class="shell pt-9">
+        <div class="flex flex-wrap items-center gap-3.5 pb-3.5">
+          <span class="section-label">Disk &middot; fio block size sweep</span>
+          <span class="section-note">
+            Mixed 50/50 read-write &middot; small blocks favour IOPS, large blocks favour throughput
+          </span>
+          <span class="hairline flex-1" />
+        </div>
+        <FioTable results={fioResults} />
+
+        {avgRun !== null && (
+          <p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-tertiary">
+            <span>bench.sh sequential write, three runs:</span>
+            {bench?.io_mb_s?.run1 != null && <span class="mono">run 1 {nmb(bench.io_mb_s.run1)} MB/s</span>}
+            {bench?.io_mb_s?.run2 != null && <span class="mono">run 2 {nmb(bench.io_mb_s.run2)} MB/s</span>}
+            {bench?.io_mb_s?.run3 != null && <span class="mono">run 3 {nmb(bench.io_mb_s.run3)} MB/s</span>}
+            <span class="mono font-medium text-ink">average {nmb(avgRun)} MB/s</span>
+          </p>
+        )}
+      </section>
+    )
+  }
+
+  <!-- Network -->
+  {
+    (iperf4.length > 0 || iperf6.length > 0 || speedtest.length > 0) && (
+      <section class="shell pt-9">
+        {iperf4.length > 0 && (
+          <div class="pb-8">
+            <div class="flex flex-wrap items-center gap-3.5 pb-3.5">
+              <span class="section-label">Network &middot; iperf3 IPv4</span>
+              <span class="section-note">Upload and download against {iperf4.length} public test nodes</span>
+              <span class="hairline flex-1" />
+            </div>
+            <IperfTable results={iperf4} ipVersion="IPv4" />
           </div>
         )}
-      </div>
-      <div class="flex flex-col gap-2 items-end text-xs text-gray-400">
-        <span>Last updated {daysAgo(data.last_updated)}</span>
-        <div class="flex flex-wrap gap-1 mt-2 justify-end">
-          {data.tags.map((tag) => (<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono tracking-wide">{tag}</span>))}
-        </div>
-      </div>
-    </div>
 
-    <!-- Benchmark Summary Tiles -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-white border border-blue-100 rounded-xl p-5 flex flex-col items-center shadow-sm">
-        <span class="text-2xl font-extrabold text-blue-700">{nmb(summary.geekbench_single)}</span>
-        <span class="text-xs text-gray-500 mt-1">Geekbench SC</span>
-      </div>
-      <div class="bg-white border border-blue-100 rounded-xl p-5 flex flex-col items-center shadow-sm">
-        <span class="text-2xl font-extrabold text-blue-700">{nmb(summary.geekbench_multi)}</span>
-        <span class="text-xs text-gray-500 mt-1">Geekbench MC</span>
-      </div>
-      <div class="bg-white border border-blue-100 rounded-xl p-5 flex flex-col items-center shadow-sm">
-        <span class="text-2xl font-extrabold text-cyan-700">{nmb(summary.max_iops)}</span>
-        <span class="text-xs text-gray-500 mt-1">Max IOPS</span>
-      </div>
-      <div class="bg-white border border-blue-100 rounded-xl p-5 flex flex-col items-center shadow-sm">
-        <span class="text-2xl font-extrabold text-cyan-700">{mbs(summary.dd_avg_mb_s ?? summary.max_write_mb_s)}</span>
-        <span class="text-xs text-gray-500 mt-1">Avg MB/s</span>
-      </div>
-    </div>
-
-    <!-- Overview Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <!-- System Information -->
-      <div class="bg-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm">
-        <h3 class="font-bold text-lg mb-2 text-blue-700">System Information</h3>
-        <div class="text-sm flex flex-col gap-1">
-          <div><span class="font-semibold text-gray-700">Provider:</span> {data.provider}</div>
-          <div><span class="font-semibold text-gray-700">Plan:</span> {data.title}</div>
-          <div><span class="font-semibold text-gray-700">CPU Cores:</span> {data.cpu_cores ?? "—"}</div>
-          <div><span class="font-semibold text-gray-700">RAM:</span> {data.ram_gb ?? "—"}GB</div>
-          <div><span class="font-semibold text-gray-700">Storage:</span> {data.storage_gb ?? "—"}GB {data.storage_type ?? ""}</div>
-          <div><span class="font-semibold text-gray-700">Location:</span> {data.location ?? "—"}</div>
-          <div><span class="font-semibold text-gray-700">Virtualization:</span> {data.virtualization ?? "—"}</div>
-          {yabs?.os?.distro && <div><span class="font-semibold text-gray-700">OS:</span> {yabs.os.distro}</div>}
-          {yabs?.os?.kernel && <div><span class="font-semibold text-gray-700">Kernel:</span> {yabs.os.kernel}</div>}
-          {yabs?.cpu?.model && <div><span class="font-semibold text-gray-700">CPU:</span> {yabs.cpu.model}</div>}
-          {bench?.net?.organization && <div><span class="font-semibold text-gray-700">Network:</span> {bench.net.organization}</div>}
-        </div>
-      </div>
-
-      <!-- Disk I/O -->
-      <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm">
-        <h3 class="font-bold text-lg mb-2 text-blue-700">Disk I/O Performance</h3>
-        <div class="flex gap-6 mb-2">
-          <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-blue-700">{mbs(summary.max_read_mb_s)}</span>
-            <span class="text-xs text-gray-500">Max Read</span>
-          </div>
-          <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-blue-700">{mbs(summary.max_write_mb_s)}</span>
-            <span class="text-xs text-gray-500">Max Write</span>
-          </div>
-        </div>
-        <span class="text-xs text-gray-400">fio mixed R/W 50/50</span>
-      </div>
-
-      <!-- Network -->
-      <div class="bg-gradient-to-br from-cyan-50 to-white border border-blue-100 rounded-xl p-6 flex flex-col gap-2 shadow-sm">
-        <h3 class="font-bold text-lg mb-2 text-cyan-700">Network Performance</h3>
-        <div class="flex gap-6 mb-2">
-          <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-cyan-700">{summary.best_iperf_send ?? "—"}</span>
-            <span class="text-xs text-gray-500">Best Send (IPv4)</span>
-          </div>
-          <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-cyan-700">{summary.speedtest_best_download ?? "—"}</span>
-            <span class="text-xs text-gray-500">Best Download</span>
-          </div>
-        </div>
-        <span class="text-xs text-gray-400">iperf3 + speedtest.net</span>
-      </div>
-    </div>
-
-    <!-- Benchmark Tables -->
-    <div class="mb-6">
-      <details class="bg-blue-50 rounded-lg border border-blue-100">
-        <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-blue-100 rounded-t-lg">Disk Benchmark Details</summary>
-        <div class="p-4">
-          {fioResults.length > 0
-            ? <FioTable results={fioResults} />
-            : <div class="text-gray-400 text-xs">No disk benchmark data available.</div>}
-        </div>
-      </details>
-      <details class="bg-cyan-50 rounded-lg border border-blue-100 mt-2">
-        <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-cyan-100 rounded-t-lg">Network Benchmark Details (IPv4)</summary>
-        <div class="p-4">
-          {iperf4.length > 0
-            ? <IperfTable results={iperf4} ipVersion="IPv4" />
-            : <div class="text-gray-400 text-xs">No IPv4 network data.</div>}
-        </div>
-      </details>
-      {iperf6.length > 0 && (
-        <details class="bg-cyan-50 rounded-lg border border-blue-100 mt-2">
-          <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-cyan-100 rounded-t-lg">Network Benchmark Details (IPv6)</summary>
-          <div class="p-4">
+        {iperf6.length > 0 && (
+          <div class="pb-8">
+            <div class="flex flex-wrap items-center gap-3.5 pb-3.5">
+              <span class="section-label">Network &middot; iperf3 IPv6</span>
+              <span class="section-note">Same nodes over IPv6</span>
+              <span class="hairline flex-1" />
+            </div>
             <IperfTable results={iperf6} ipVersion="IPv6" />
           </div>
-        </details>
-      )}
-      {bench && bench.speedtest && bench.speedtest.length > 0 && (
-        <details class="bg-cyan-50 rounded-lg border border-blue-100 mt-2">
-          <summary class="cursor-pointer text-base font-semibold p-3 text-blue-600 hover:bg-cyan-100 rounded-t-lg">Speedtest.net Locations</summary>
-          <div class="p-4 overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead>
-                <tr class="text-gray-600">
-                  <th class="p-2">Node</th><th class="p-2">Upload</th>
-                  <th class="p-2">Download</th><th class="p-2">Latency</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bench.speedtest.map((s) => (
-                  <tr class="border-t border-gray-100">
-                    <td class="p-2 font-mono">{s.node}</td>
-                    <td class="p-2">{s.upload}</td>
-                    <td class="p-2">{s.download}</td>
-                    <td class="p-2">{s.latency}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      )}
-    </div>
+        )}
 
-    <!-- Raw Output -->
-    {rawYabs && (
-      <div class="mb-8">
-        <details class="bg-gray-100 rounded-lg">
-          <summary class="cursor-pointer text-base font-semibold p-3 text-gray-500 hover:bg-gray-100 rounded-t-lg">Raw YABS Output ({yabs?.version ?? "unknown"})</summary>
-          <pre class="bg-gray-50 p-4 rounded-b-lg overflow-x-auto text-xs text-gray-700"><code>{rawYabs}</code></pre>
-        </details>
-      </div>
-    )}
-    {rawBench && (
-      <div class="mb-8">
-        <details class="bg-gray-100 rounded-lg">
-          <summary class="cursor-pointer text-base font-semibold p-3 text-gray-500 hover:bg-gray-100 rounded-t-lg">Raw bench.sh Output ({bench?.version ?? "unknown"})</summary>
-          <pre class="bg-gray-50 p-4 rounded-b-lg overflow-x-auto text-xs text-gray-700"><code>{rawBench}</code></pre>
-        </details>
-      </div>
-    )}
-  </div>
+        {speedtest.length > 0 && (
+          <div>
+            <div class="flex flex-wrap items-center gap-3.5 pb-3.5">
+              <span class="section-label">Network &middot; speedtest.net</span>
+              <span class="section-note">{speedtest.length} nodes, as reported by bench.sh</span>
+              <span class="hairline flex-1" />
+            </div>
+            <div class="overflow-x-auto">
+              <table class="dtable min-w-[720px]">
+                <thead>
+                  <tr class="border-b border-ink">
+                    <th>Node</th>
+                    <th class="text-right">Upload (Mbps)</th>
+                    <th class="text-right">Download (Mbps)</th>
+                    <th class="text-right">Latency</th>
+                    <th><span class="sr-only">Relative download</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {speedtest.map((s) => {
+                    const dl = parseFloat((s.download ?? '').replace(/[^0-9.]/g, ''));
+                    const maxDl = Math.max(
+                      1,
+                      ...speedtest.map((x) => parseFloat((x.download ?? '').replace(/[^0-9.]/g, '')) || 0)
+                    );
+                    return (
+                      <tr>
+                        <td class="text-[13px] text-ink">{s.node ?? '—'}</td>
+                        <td class="num">{s.upload ?? '—'}</td>
+                        <td class="num">{s.download ?? '—'}</td>
+                        <td class="num">{s.latency ?? '—'}</td>
+                        <td>
+                          {Number.isFinite(dl) && (
+                            <span class="block h-[3px] w-[136px] bg-[#dedede]">
+                              <i
+                                class="block h-full bg-ink"
+                                style={`width:${Math.max(2, Math.round((dl / maxDl) * 100))}%`}
+                              />
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+    )
+  }
+
+  <!-- Raw output -->
+  {
+    (rawYabs || rawBench) && (
+      <section class="shell pt-9 pb-14">
+        <div class="flex flex-wrap items-center gap-3.5 pb-3">
+          <span class="section-label">Raw output</span>
+          <span class="section-note">Unmodified script output, kept for verification</span>
+          <span class="hairline flex-1" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          {rawYabs && (
+            <details class="group border border-line bg-surface-subtle">
+              <summary class="flex h-12 cursor-pointer list-none items-center gap-2.5 px-4 [&::-webkit-details-marker]:hidden">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-ink-tertiary transition-transform group-open:rotate-90">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+                <span class="text-[13px] font-medium text-ink">Raw YABS output</span>
+                <span class="mono text-[11px] text-ink-tertiary">
+                  {yabs?.version ?? 'unknown version'} &middot; {yabs?.runtime_sec ?? '—'}s runtime
+                </span>
+              </summary>
+              <pre class="max-h-[420px] overflow-auto border-t border-line bg-surface p-4 text-[12px] leading-[1.5] text-ink-secondary"><code>{rawYabs}</code></pre>
+            </details>
+          )}
+
+          {rawBench && (
+            <details class="group border border-line bg-surface-subtle">
+              <summary class="flex h-12 cursor-pointer list-none items-center gap-2.5 px-4 [&::-webkit-details-marker]:hidden">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-ink-tertiary transition-transform group-open:rotate-90">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+                <span class="text-[13px] font-medium text-ink">Raw bench.sh output</span>
+                <span class="mono text-[11px] text-ink-tertiary">
+                  {bench?.version ?? 'unknown version'} &middot; {bench?.runtime_sec ?? '—'}s runtime
+                </span>
+              </summary>
+              <pre class="max-h-[420px] overflow-auto border-t border-line bg-surface p-4 text-[12px] leading-[1.5] text-ink-secondary"><code>{rawBench}</code></pre>
+            </details>
+          )}
+        </div>
+      </section>
+    )
+  }
 </Layout>

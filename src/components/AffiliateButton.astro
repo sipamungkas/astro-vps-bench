@@ -1,16 +1,20 @@
 ---
 interface Props {
   link: string;
-  providerName: string;
+  providerName?: string;
 }
 
-const { link, providerName } = Astro.props;
+const { link, providerName = 'this provider' } = Astro.props;
 ---
+
 <a
   href={link}
   target="_blank"
-  rel="noopener noreferrer"
-  class="inline-block rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-bold px-6 py-3 shadow-lg hover:scale-105 hover:brightness-110 transition-all duration-200 text-base tracking-wide"
+  rel="noopener noreferrer sponsored"
+  class="inline-flex h-[42px] items-center gap-2.5 bg-accent px-[18px] text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
 >
-  Visit {providerName}
-</a> 
+  Buy from {providerName}
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 17L17 7M9 7h8v8" />
+  </svg>
+</a>

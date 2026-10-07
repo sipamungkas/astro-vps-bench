@@ -1,10 +1,11 @@
 ---
 /**
- * Tabel hasil iperf3.
+ * iperf3 results for one address family.
  *
- * Kecepatan disimpan sebagai string ("412.55 Mbit/s") karena satuan berbeda
- * antar lokasi pengukuran. Nilai 0.00 sudah diubah "busy" oleh parser,
- * mengikuti perilaku YABS aslinya.
+ * Throughput stays a string because units differ per test node. The bar needs a
+ * number, so it is derived by parsing the value into Mbit/s; the displayed
+ * text is never rewritten. `busy` is what the upstream parser stores for a
+ * server that refused the test, and it stays visible rather than becoming 0.
  */
 import type { IperfResult } from '../types/bench';
 
@@ -14,35 +15,59 @@ interface Props {
 }
 
 const { results, ipVersion = 'IPv4' } = Astro.props;
-const show = (v: string | null | undefined) => v ?? '—';
+
+const show = (v: string | null | undefined) => (v === null || v === undefined || v === '' ? '—' : v);
+
+function toMbps(s: string | null | undefined): number | null {
+  if (!s || s === 'busy') return null;
+  const m = String(s).match(/^([\d.]+)\s*([KMG])/i);
+  if (!m) return null;
+  const mult = { k: 1e-3, m: 1, g: 1e3 }[m[2]!.toLowerCase()]!;
+  return parseFloat(m[1]!) * mult;
+}
+
+const max = Math.max(1, ...results.map((r) => toMbps(r.send) ?? 0));
+
+function bar(v: string | null | undefined): number {
+  const n = toMbps(v);
+  return n === null ? 0 : Math.max(2, Math.round((n / max) * 100));
+}
+
+const isMissing = (v: string | null | undefined) => !v || v === 'busy';
 ---
 
-<div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
-  <h3 class="text-lg font-bold mb-4 text-cyan-400">
-    Network Speed Tests (iperf3 {ipVersion})
-  </h3>
-  <div class="overflow-x-auto">
-    <table class="w-full text-left table-auto text-sm">
-      <thead>
-        <tr class="bg-gray-800 text-gray-300">
-          <th class="p-3 font-semibold">Provider</th>
-          <th class="p-3 font-semibold">Location</th>
-          <th class="p-3 font-semibold">Send Speed</th>
-          <th class="p-3 font-semibold">Recv Speed</th>
-          <th class="p-3 font-semibold">Ping</th>
-        </tr>
-      </thead>
-      <tbody>
-        {results.map((r) => (
-          <tr class="border-b border-gray-800 hover:bg-cyan-900/20 transition">
-            <td class="p-3 font-mono text-cyan-200">{show(r.provider)}</td>
-            <td class="p-3">{show(r.loc)}</td>
-            <td class="p-3">{show(r.send)}</td>
-            <td class="p-3">{show(r.recv)}</td>
-            <td class="p-3">{show(r.latency)}</td>
+<div class="overflow-x-auto">
+  <table class="dtable min-w-[860px]">
+    <thead>
+      <tr class="border-b border-ink">
+        <th>Location</th>
+        <th>Provider</th>
+        <th class="text-right">Send (Mbit/s)</th>
+        <th class="text-right">Receive (Mbit/s)</th>
+        <th class="text-right">Latency</th>
+        <th><span class="sr-only">Relative send</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        results.map((r) => (
+          <tr>
+            <td class="text-[13px] text-ink">{show(r.loc)}</td>
+            <td class="mono text-[12px] text-ink-secondary">{show(r.provider)}</td>
+            <td class:list={['num', isMissing(r.send) && 'text-missing']}>{show(r.send)}</td>
+            <td class:list={['num', isMissing(r.recv) && 'text-missing']}>{show(r.recv)}</td>
+            <td class="num">{show(r.latency)}</td>
+            <td>
+              {toMbps(r.send) !== null && (
+                <span class="block h-[3px] w-[136px] bg-[#dedede]">
+                  <i class="block h-full bg-ink" style={`width:${bar(r.send)}%`}></i>
+                </span>
+              )}
+            </td>
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+        ))
+      }
+    </tbody>
+  </table>
+  <p class="sr-only">iperf3 results for {ipVersion}</p>
 </div>

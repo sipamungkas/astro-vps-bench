@@ -1,11 +1,11 @@
 ---
 /**
- * Tabel hasil fio.
+ * fio block-size sweep.
  *
- * Data berasal dari tools/vps-bench yang sudah menormalkan kecepatan ke
- * KBps dan IOPS jadi angka penuh - termasuk format ringkas `(44.3k)` yang
- * dipakai YABS versi lama. Jadi yang tampil di sini sudah bisa dibandingkan
- * antar server tanpa konversi lagi.
+ * `tools/vps-bench` has already normalised fio throughput to KBps and IOPS to
+ * plain integers (including the compact `(44.3k)` form older YABS used), so
+ * nothing here re-parses. KBps is divided by 1024 to show MB/s, which is the
+ * unit the rest of the site reports in.
  */
 import type { FioResult } from '../types/bench';
 
@@ -15,46 +15,59 @@ interface Props {
 
 const { results } = Astro.props;
 
-/** KBps -> MB/s, satu desimal. Tidak mengubah null jadi 0. */
+/** KBps -> MB/s, one decimal. Never turns a missing value into 0. */
 function mb(kbps: number | null | undefined): string {
   if (kbps === null || kbps === undefined) return '—';
-  return `${(kbps / 1024).toFixed(1)} MB/s`;
+  return (kbps / 1024).toFixed(1);
 }
 
 function num(n: number | null | undefined): string {
   if (n === null || n === undefined) return '—';
   return n.toLocaleString('en-US');
 }
+
+/** Bar scale: the largest mixed IOPS in this block-size sweep. */
+const maxIops = Math.max(1, ...results.map((r) => r.iops_rw ?? 0));
+
+function bar(v: number | null | undefined): number {
+  if (v === null || v === undefined) return 0;
+  return Math.max(2, Math.round((v / maxIops) * 100));
+}
 ---
 
-<div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
-  <h3 class="text-lg font-bold mb-4 text-cyan-400">Disk Speed Tests (fio)</h3>
-  <div class="overflow-x-auto">
-    <table class="w-full text-left table-auto text-sm">
-      <thead>
-        <tr class="bg-gray-800 text-gray-300">
-          <th class="p-3 font-semibold">Block Size</th>
-          <th class="p-3 font-semibold">Read</th>
-          <th class="p-3 font-semibold">Read IOPS</th>
-          <th class="p-3 font-semibold">Write</th>
-          <th class="p-3 font-semibold">Write IOPS</th>
-          <th class="p-3 font-semibold">Mixed</th>
-          <th class="p-3 font-semibold">Mixed IOPS</th>
-        </tr>
-      </thead>
-      <tbody>
-        {results.map((r) => (
-          <tr class="border-b border-gray-800 hover:bg-cyan-900/20 transition">
-            <td class="p-3 font-mono text-cyan-200">{r.bs ?? '—'}</td>
-            <td class="p-3">{mb(r.speed_r)}</td>
-            <td class="p-3">{num(r.iops_r)}</td>
-            <td class="p-3">{mb(r.speed_w)}</td>
-            <td class="p-3">{num(r.iops_w)}</td>
-            <td class="p-3">{mb(r.speed_rw)}</td>
-            <td class="p-3">{num(r.iops_rw)}</td>
+<div class="overflow-x-auto">
+  <table class="dtable min-w-[860px]">
+    <thead>
+      <tr class="border-b border-ink">
+        <th>Block size</th>
+        <th class="text-right">Read MB/s</th>
+        <th class="text-right">Read IOPS</th>
+        <th class="text-right">Write MB/s</th>
+        <th class="text-right">Write IOPS</th>
+        <th class="text-right">Total MB/s</th>
+        <th class="text-right">Total IOPS</th>
+        <th><span class="sr-only">Relative</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        results.map((r) => (
+          <tr>
+            <td class="key">{r.bs ?? '—'}</td>
+            <td class="num">{mb(r.speed_r)}</td>
+            <td class="num">{num(r.iops_r)}</td>
+            <td class="num">{mb(r.speed_w)}</td>
+            <td class="num">{num(r.iops_w)}</td>
+            <td class="num">{mb(r.speed_rw)}</td>
+            <td class="num-strong">{num(r.iops_rw)}</td>
+            <td>
+              <span class="block h-[3px] w-[140px] bg-[#dedede]">
+                <i class="block h-full bg-ink" style={`width:${bar(r.iops_rw)}%`}></i>
+              </span>
+            </td>
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+        ))
+      }
+    </tbody>
+  </table>
 </div>

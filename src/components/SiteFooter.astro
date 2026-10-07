@@ -1,0 +1,69 @@
+---
+/**
+ * Site footer.
+ *
+ * Dark ground to close the page and to separate the site chrome from the
+ * data surfaces above it. The "How it works" column is plain text, not links:
+ * those notes live on the detail pages, and a dead link is worse than no link.
+ */
+const explore = [
+  { label: 'Dashboard', href: '/' },
+  { label: 'Compare', href: '/compare' },
+];
+
+const sources = ['YABS.sh', 'bench.sh (Teddysun)', 'Geekbench 6', 'iperf3', 'Speedtest.net'];
+const how = ['Benchmark run', 'Number normalization', 'Missing data policy'];
+const year = new Date().getFullYear();
+---
+
+<footer class="bg-surface-inverse text-white">
+  <div class="shell flex flex-col gap-11 pt-14 pb-7">
+    <div class="flex flex-wrap items-start gap-12">
+      <div class="w-full max-w-[330px]">
+        <p class="font-display text-[18px] font-bold tracking-tight">vpsbench</p>
+        <p class="mt-3 text-[13px] leading-[1.55] text-white/65">
+          Real YABS.sh and bench.sh runs on VPS plans in Southeast Asia,
+          normalised so every number is comparable. No vendor marketing numbers.
+        </p>
+      </div>
+
+      <div class="min-w-[150px] flex-1">
+        <p class="section-label !text-white/40">Explore</p>
+        <ul class="mt-2.5 flex flex-col gap-2.5">
+          {
+            explore.map((l) => (
+              <li>
+                <a href={l.href} class="text-[13px] text-white/85 transition-colors hover:text-white">
+                  {l.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="min-w-[150px] flex-1">
+        <p class="section-label !text-white/40">Data sources</p>
+        <ul class="mt-2.5 flex flex-col gap-2.5">
+          {sources.map((s) => <li class="text-[13px] text-white/85">{s}</li>)}
+        </ul>
+      </div>
+
+      <div class="min-w-[150px] flex-1">
+        <p class="section-label !text-white/40">How it works</p>
+        <ul class="mt-2.5 flex flex-col gap-2.5">
+          {how.map((s) => <li class="text-[13px] text-white/85">{s}</li>)}
+        </ul>
+      </div>
+    </div>
+
+    <div class="hairline !bg-white/[0.12]"></div>
+
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <p class="mono text-[12px] text-white/40">&copy; {year} Sipamungkas.com</p>
+      <p class="mono text-[12px] text-white/40">
+        Benchmarks reflect one point in time on a shared host
+      </p>
+    </div>
+  </div>
+</footer>
